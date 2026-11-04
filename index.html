@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>01 Личное</title>
+<style>
+  :root {
+    --bg: #f4f1ec;
+    --card: #ffffff;
+    --text: #1f2328;
+    --muted: #6b7280;
+    --accent: #2f6f5e;
+    --accent-text: #ffffff;
+    --line: #e3ded5;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14181a;
+      --card: #1e2326;
+      --text: #e8e6e1;
+      --muted: #98a0a6;
+      --accent: #5fb89f;
+      --accent-text: #0f1a16;
+      --line: #2c3338;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+    line-height: 1.4;
+  }
+  header { padding: 20px 16px 8px; }
+  h1 { margin: 0; font-size: 24px; }
+  .sub { color: var(--muted); font-size: 14px; margin-top: 2px; }
+  .links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+  .btn {
+    display: inline-block;
+    padding: 10px 14px;
+    border-radius: 10px;
+    background: var(--accent);
+    color: var(--accent-text);
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 600;
+    border: 0;
+    cursor: pointer;
+  }
+  .btn.ghost {
+    background: transparent;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+  }
+  nav {
+    display: flex;
+    gap: 6px;
+    padding: 12px 16px 0;
+    position: sticky;
+    top: 0;
+    background: var(--bg);
+    z-index: 5;
+  }
+  nav button {
+    flex: 1;
+    padding: 12px;
+    border: 0;
+    border-bottom: 3px solid transparent;
+    background: transparent;
+    color: var(--muted);
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  nav button.active { color: var(--text); border-bottom-color: var(--accent); }
+  main { padding: 12px 16px 40px; }
+  section { display: none; }
+  section.active { display: block; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 14px;
+    margin-bottom: 14px;
+  }
+  .card h2 { margin: 0 0 10px; font-size: 17px; }
+  iframe {
+    width: 100%;
+    border: 0;
+    border-radius: 8px;
+    background: var(--card);
+  }
+  .commit { padding: 8px 0; border-top: 1px solid var(--line); font-size: 14px; }
+  .commit:first-child { border-top: 0; }
+  .commit small { display: block; color: var(--muted); }
+  .note { color: var(--muted); font-size: 13px; margin-top: 8px; }
+  input[type=text] {
+    width: 100%;
+    padding: 12px;
+    font-size: 16px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--bg);
+    color: var(--text);
+    margin: 8px 0;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>01 Личное</h1>
+  <div class="sub">Панель управления</div>
+  <div class="links">
+    <a class="btn" id="linkDrive" target="_blank" rel="noopener">Папка на Диске</a>
+    <a class="btn ghost" id="linkGit" target="_blank" rel="noopener">GitHub</a>
+    <a class="btn ghost" id="linkCal" target="_blank" rel="noopener">Календарь</a>
+  </div>
+</header>
+
+<nav>
+  <button class="active" data-tab="overview">Обзор</button>
+  <button data-tab="calendar">Календарь</button>
+</nav>
+
+<main>
+
+  <section id="overview" class="active">
+    <div class="card">
+      <h2>Ближайшие события</h2>
+      <div class="calSlot" data-mode="AGENDA" data-height="320"></div>
+    </div>
+
+    <div class="card">
+      <h2>Файлы в папке</h2>
+      <iframe id="driveFrame" height="320"></iframe>
+      <div class="note">Если список пустой, нажмите «Папка на Диске» вверху.</div>
+    </div>
+
+    <div class="card">
+      <h2>Последние изменения (GitHub)</h2>
+      <div id="commits">Загрузка…</div>
+    </div>
+  </section>
+
+  <section id="calendar">
+    <div class="card">
+      <div class="calSlot" data-mode="MONTH" data-height="560"></div>
+      <div class="note">Если календарь не показывается, откройте его кнопкой «Календарь» вверху.</div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+// ===== НАСТРОЙКИ ПАНЕЛИ (меняются только здесь) =====
+var CONFIG = {
+  title: "01 Личное",
+  githubUser: "htongrad",
+  githubRepo: "01-lichnoe",
+  driveFolderId: "188zha7cSRoGIz5X5UNqEIH0_aOqjMs71",
+  calendarId: "",            // пусто = ID вводится один раз на телефоне и хранится только в нём
+  timezone: "Europe/Moscow"
+};
+// =====================================================
+
+function getCalendarId() {
+  if (CONFIG.calendarId) return CONFIG.calendarId;
+  try { return localStorage.getItem("calendarId") || ""; } catch (e) { return ""; }
+}
+
+function calendarUrl(id, mode) {
+  return "https://calendar.google.com/calendar/embed?src=" + encodeURIComponent(id) +
+    "&ctz=" + encodeURIComponent(CONFIG.timezone) +
+    "&mode=" + mode + "&hl=ru&showTitle=0&showPrint=0&showTz=0&showCalendars=0";
+}
+
+function buildCalendars() {
+  var id = getCalendarId();
+  var slots = document.querySelectorAll(".calSlot");
+  for (var i = 0; i < slots.length; i++) {
+    var slot = slots[i];
+    slot.innerHTML = "";
+    if (!id) {
+      var p = document.createElement("div");
+      p.textContent = "Вставьте ID календаря (для основного календаря это адрес вашей почты Google). Он сохранится только на этом телефоне.";
+      var input = document.createElement("input");
+      input.type = "text";
+      input.placeholder = "ID календаря";
+      var btn = document.createElement("button");
+      btn.className = "btn";
+      btn.textContent = "Сохранить";
+      btn.onclick = (function (inp) {
+        return function () {
+          var v = inp.value.trim();
+          if (!v) return;
+          try { localStorage.setItem("calendarId", v); } catch (e) {}
+          buildCalendars();
+          setLinks();
+        };
+      })(input);
+      slot.appendChild(p);
+      slot.appendChild(input);
+      slot.appendChild(btn);
+    } else {
+      var f = document.createElement("iframe");
+      f.src = calendarUrl(id, slot.getAttribute("data-mode"));
+      f.height = slot.getAttribute("data-height");
+      slot.appendChild(f);
+    }
+  }
+}
+
+function setLinks() {
+  document.getElementById("linkDrive").href = "https://drive.google.com/drive/folders/" + CONFIG.driveFolderId;
+  document.getElementById("linkGit").href = "https://github.com/" + CONFIG.githubUser + "/" + CONFIG.githubRepo;
+  var id = getCalendarId();
+  document.getElementById("linkCal").href = id
+    ? "https://calendar.google.com/calendar/r?cid=" + encodeURIComponent(id)
+    : "https://calendar.google.com/calendar/r";
+}
+
+function loadDrive() {
+  document.getElementById("driveFrame").src =
+    "https://drive.google.com/embeddedfolderview?id=" + CONFIG.driveFolderId + "#list";
+}
+
+function loadCommits() {
+  var box = document.getElementById("commits");
+  var url = "https://api.github.com/repos/" + CONFIG.githubUser + "/" + CONFIG.githubRepo + "/commits?per_page=5";
+  fetch(url)
+    .then(function (r) {
+      if (r.status === 409) return [];
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    })
+    .then(function (list) {
+      if (!list.length) { box.textContent = "Пока нет изменений."; return; }
+      box.innerHTML = "";
+      list.forEach(function (c) {
+        var d = document.createElement("div");
+        d.className = "commit";
+        var msg = (c.commit.message || "").split("\n")[0];
+        d.textContent = msg;
+        var s = document.createElement("small");
+        s.textContent = new Date(c.commit.author.date).toLocaleString("ru-RU");
+        d.appendChild(s);
+        box.appendChild(d);
+      });
+    })
+    .catch(function () {
+      box.textContent = "Не удалось загрузить. Откройте репозиторий кнопкой GitHub вверху.";
+    });
+}
+
+function setupTabs() {
+  var buttons = document.querySelectorAll("nav button");
+  for (var i = 0; i < buttons.length; i++) {
+    buttons[i].onclick = function () {
+      var tab = this.getAttribute("data-tab");
+      var all = document.querySelectorAll("nav button, section");
+      for (var j = 0; j < all.length; j++) all[j].classList.remove("active");
+      this.classList.add("active");
+      document.getElementById(tab).classList.add("active");
+    };
+  }
+}
+
+document.title = CONFIG.title;
+setupTabs();
+setLinks();
+buildCalendars();
+loadDrive();
+loadCommits();
+</script>
+
+</body>
+</html>
