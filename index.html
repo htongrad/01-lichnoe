@@ -2,179 +2,363 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>01 Личное</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#EEF2EC">
+<meta name="color-scheme" content="light">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Личное">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png">
+<title>Личное</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #f4f1ec;
-    --card: #ffffff;
-    --text: #1f2328;
-    --muted: #6b7280;
-    --accent: #2f6f5e;
-    --accent-text: #ffffff;
-    --line: #e3ded5;
+    --bg: #EEF2EC;
+    --surface: #FFFFFF;
+    --surface-2: #F5F8F3;
+    --text: #1D2620;
+    --muted: #6C786F;
+    --line: #E0E7DD;
+    --accent: #8FB09B;         /* пыльный зелёный для заливок */
+    --accent-strong: #4F7762;  /* для текста и иконок */
+    --accent-soft: #E0EBE3;
+    --shadow: 0 1px 2px rgba(31, 52, 40, .05), 0 6px 20px rgba(31, 52, 40, .05);
+    --radius: 22px;
+    --tabbar-h: 68px;
   }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #14181a;
-      --card: #1e2326;
-      --text: #e8e6e1;
-      --muted: #98a0a6;
-      --accent: #5fb89f;
-      --accent-text: #0f1a16;
-      --line: #2c3338;
-    }
-  }
-  * { box-sizing: border-box; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html { color-scheme: light; }
   body {
     margin: 0;
     background: var(--bg);
     color: var(--text);
-    font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-family: "Manrope", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     line-height: 1.4;
+    -webkit-font-smoothing: antialiased;
+    overscroll-behavior-y: none;
   }
-  header { padding: 20px 16px 8px; }
-  h1 { margin: 0; font-size: 24px; }
-  .sub { color: var(--muted); font-size: 14px; margin-top: 2px; }
-  .links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
-  .btn {
-    display: inline-block;
-    padding: 10px 14px;
-    border-radius: 10px;
+  button { font: inherit; color: inherit; }
+
+  /* ---------- верхняя панель ---------- */
+  .appbar {
+    position: sticky; top: 0; z-index: 20;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: calc(env(safe-area-inset-top) + 14px) 20px 10px;
+    background: rgba(238, 242, 236, .86);
+    -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+  }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .brand-mark {
+    width: 32px; height: 32px; border-radius: 11px;
     background: var(--accent);
-    color: var(--accent-text);
-    text-decoration: none;
-    font-size: 14px;
-    font-weight: 600;
-    border: 0;
-    cursor: pointer;
+    display: grid; place-items: center;
   }
-  .btn.ghost {
-    background: transparent;
-    color: var(--accent);
-    border: 1px solid var(--accent);
+  .brand-mark svg { width: 18px; height: 18px; fill: #fff; }
+  h1 { margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -.3px; }
+  .icon-btn {
+    width: 40px; height: 40px; border-radius: 14px; border: 0;
+    background: transparent; color: var(--muted);
+    display: grid; place-items: center; cursor: pointer;
   }
-  nav {
-    display: flex;
-    gap: 6px;
-    padding: 12px 16px 0;
-    position: sticky;
-    top: 0;
-    background: var(--bg);
-    z-index: 5;
-  }
-  nav button {
-    flex: 1;
-    padding: 12px;
-    border: 0;
-    border-bottom: 3px solid transparent;
-    background: transparent;
-    color: var(--muted);
-    font-size: 16px;
-    font-weight: 600;
-    cursor: pointer;
-  }
-  nav button.active { color: var(--text); border-bottom-color: var(--accent); }
-  main { padding: 12px 16px 40px; }
-  section { display: none; }
-  section.active { display: block; }
+  .icon-btn:active { background: var(--accent-soft); }
+  .icon-btn svg { width: 22px; height: 22px; fill: currentColor; }
+
+  /* ---------- контент ---------- */
+  main { padding: 6px 16px calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 28px); max-width: 720px; margin: 0 auto; }
+  .tab { display: none; }
+  .tab.active { display: block; animation: rise .28s ease both; }
+  @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
   .card {
-    background: var(--card);
-    border: 1px solid var(--line);
-    border-radius: 14px;
-    padding: 14px;
+    background: var(--surface);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 16px;
     margin-bottom: 14px;
   }
-  .card h2 { margin: 0 0 10px; font-size: 17px; }
-  iframe {
-    width: 100%;
-    border: 0;
-    border-radius: 8px;
-    background: var(--card);
+  .card-head { display: flex; align-items: center; gap: 10px; margin: 0 0 12px; }
+  .card-head .ico {
+    width: 30px; height: 30px; border-radius: 10px;
+    background: var(--accent-soft); color: var(--accent-strong);
+    display: grid; place-items: center; flex: none;
   }
-  .commit { padding: 8px 0; border-top: 1px solid var(--line); font-size: 14px; }
-  .commit:first-child { border-top: 0; }
-  .commit small { display: block; color: var(--muted); }
-  .note { color: var(--muted); font-size: 13px; margin-top: 8px; }
-  input[type=text] {
-    width: 100%;
-    padding: 12px;
-    font-size: 16px;
-    border: 1px solid var(--line);
-    border-radius: 10px;
-    background: var(--bg);
-    color: var(--text);
-    margin: 8px 0;
+  .card-head .ico svg { width: 16px; height: 16px; fill: currentColor; }
+  .card-head h2 { margin: 0; font-size: 16px; font-weight: 700; }
+
+  /* герой */
+  .hero {
+    background:
+      radial-gradient(120% 90% at 100% 0%, rgba(143, 176, 155, .38) 0%, rgba(143, 176, 155, 0) 60%),
+      linear-gradient(180deg, #F2F7F3 0%, #FFFFFF 100%);
+    padding: 20px 18px 16px;
+  }
+  .hero .hello { font-size: 14px; color: var(--accent-strong); font-weight: 700; }
+  .hero .date { font-size: 26px; font-weight: 800; letter-spacing: -.5px; margin: 2px 0 16px; }
+  .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .tile { background: rgba(255,255,255,.85); border: 1px solid var(--line); border-radius: 16px; padding: 12px 14px; }
+  .tile .v { font-size: 19px; font-weight: 800; color: var(--accent-strong); }
+  .tile .l { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+  /* встроенные окна Google */
+  .frame {
+    width: 100%; border: 0; display: block;
+    border-radius: 14px; background: var(--surface);
+  }
+
+  /* журнал */
+  .log { list-style: none; margin: 0; padding: 0; }
+  .log li { position: relative; padding: 0 0 14px 22px; font-size: 14px; font-weight: 600; }
+  .log li:last-child { padding-bottom: 0; }
+  .log li::before {
+    content: ""; position: absolute; left: 3px; top: 6px; width: 9px; height: 9px;
+    border-radius: 50%; background: var(--accent);
+  }
+  .log li::after {
+    content: ""; position: absolute; left: 7px; top: 18px; bottom: -2px; width: 1px; background: var(--line);
+  }
+  .log li:last-child::after { display: none; }
+  .log small { display: block; color: var(--muted); font-weight: 500; font-size: 12px; margin-top: 1px; }
+  .muted { color: var(--muted); font-size: 14px; }
+
+  /* настройка календаря */
+  .setup { text-align: center; padding: 18px 6px; }
+  .setup p { margin: 0 0 12px; color: var(--muted); font-size: 14px; }
+  .field {
+    width: 100%; padding: 14px 16px; font: inherit; font-size: 16px;
+    border: 1px solid var(--line); border-radius: 14px;
+    background: var(--surface-2); color: var(--text); margin-bottom: 10px; outline: none;
+  }
+  .field:focus { border-color: var(--accent); }
+  .btn {
+    width: 100%; padding: 14px; border: 0; border-radius: 14px;
+    background: var(--accent-strong); color: #fff; font-weight: 700; font-size: 16px; cursor: pointer;
+  }
+  .btn:active { opacity: .88; }
+
+  /* календарь */
+  .seg {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px;
+    background: var(--accent-soft); border-radius: 16px; padding: 4px; margin-bottom: 12px;
+  }
+  .seg button {
+    border: 0; background: transparent; padding: 10px 0; border-radius: 12px;
+    font-weight: 700; font-size: 14px; color: var(--muted); cursor: pointer;
+  }
+  .seg button.on { background: var(--surface); color: var(--accent-strong); box-shadow: 0 1px 3px rgba(31,52,40,.12); }
+  .cal-card { padding: 8px; height: calc(100vh - 262px); height: calc(100dvh - 262px); min-height: 440px; margin-bottom: 0; }
+  .cal-card .frame { height: 100%; }
+  .cal-card .setup { padding-top: 40px; }
+
+  /* нижнее меню */
+  .tabbar {
+    position: fixed; left: 50%; transform: translateX(-50%); z-index: 30;
+    bottom: calc(env(safe-area-inset-bottom) + 12px);
+    width: min(calc(100% - 32px), 420px); height: var(--tabbar-h);
+    background: var(--surface); border-radius: 26px;
+    box-shadow: 0 2px 4px rgba(31,52,40,.06), 0 12px 32px rgba(31,52,40,.14);
+    display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 8px;
+  }
+  .tabbar button {
+    border: 0; background: transparent; border-radius: 19px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    color: var(--muted); font-weight: 700; font-size: 14px;
+    transition: background .2s, color .2s;
+  }
+  .tabbar button svg { width: 22px; height: 22px; fill: currentColor; }
+  .tabbar button.on { background: var(--accent-soft); color: var(--accent-strong); }
+
+  /* меню-шторка */
+  .backdrop {
+    position: fixed; inset: 0; z-index: 40; background: rgba(20, 32, 25, .38);
+    opacity: 0; pointer-events: none; transition: opacity .22s;
+  }
+  .backdrop.open { opacity: 1; pointer-events: auto; }
+  .sheet {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 50;
+    max-width: 720px; margin: 0 auto;
+    background: var(--surface); border-radius: 26px 26px 0 0;
+    padding: 10px 16px calc(env(safe-area-inset-bottom) + 20px);
+    transform: translateY(105%); transition: transform .28s cubic-bezier(.2,.8,.2,1);
+  }
+  .sheet.open { transform: none; }
+  .grab { width: 40px; height: 4px; border-radius: 2px; background: var(--line); margin: 0 auto 14px; }
+  .sheet h3 { margin: 0 6px 8px; font-size: 13px; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: .6px; }
+  .row {
+    display: flex; align-items: center; gap: 14px; width: 100%;
+    padding: 13px 8px; border: 0; background: transparent; border-radius: 14px;
+    text-align: left; text-decoration: none; color: var(--text); font-weight: 600; font-size: 16px; cursor: pointer;
+  }
+  .row:active { background: var(--surface-2); }
+  .row .ico { width: 38px; height: 38px; border-radius: 12px; background: var(--accent-soft); color: var(--accent-strong); display: grid; place-items: center; flex: none; }
+  .row .ico svg { width: 20px; height: 20px; fill: currentColor; }
+  .row small { display: block; color: var(--muted); font-weight: 500; font-size: 12px; }
+  .row .arrow { margin-left: auto; color: var(--muted); }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
   }
 </style>
 </head>
 <body>
 
-<header>
-  <h1>01 Личное</h1>
-  <div class="sub">Панель управления</div>
-  <div class="links">
-    <a class="btn" id="linkDrive" target="_blank" rel="noopener">Папка на Диске</a>
-    <a class="btn ghost" id="linkGit" target="_blank" rel="noopener">GitHub</a>
-    <a class="btn ghost" id="linkCal" target="_blank" rel="noopener">Календарь</a>
+<header class="appbar">
+  <div class="brand">
+    <div class="brand-mark">
+      <svg viewBox="0 0 24 24"><path d="M12 2.5c4.2 2 6.2 6.4 0 18.5C5.8 8.9 7.8 4.5 12 2.5z"/></svg>
+    </div>
+    <h1>Личное</h1>
   </div>
+  <button class="icon-btn" id="menuBtn" aria-label="Ссылки и настройки">
+    <svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
+  </button>
 </header>
-
-<nav>
-  <button class="active" data-tab="overview">Обзор</button>
-  <button data-tab="calendar">Календарь</button>
-</nav>
 
 <main>
 
-  <section id="overview" class="active">
-    <div class="card">
-      <h2>Ближайшие события</h2>
-      <div class="calSlot" data-mode="AGENDA" data-height="320"></div>
+  <!-- ОБЗОР -->
+  <section class="tab active" id="tab-overview">
+
+    <div class="card hero">
+      <div class="hello" id="hello">Здравствуйте</div>
+      <div class="date" id="today">&nbsp;</div>
+      <div class="tiles">
+        <div class="tile"><div class="v" id="tileLast">—</div><div class="l">последнее обновление</div></div>
+        <div class="tile"><div class="v" id="tileCount">—</div><div class="l">обновлений за 30 дней</div></div>
+      </div>
     </div>
 
     <div class="card">
-      <h2>Файлы в папке</h2>
-      <iframe id="driveFrame" height="320"></iframe>
-      <div class="note">Если список пустой, нажмите «Папка на Диске» вверху.</div>
+      <div class="card-head">
+        <div class="ico"><svg viewBox="0 0 24 24"><path d="M7 2v2H5a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2V2h-2v2H9V2H7zm-2 8h14v9H5v-9z"/></svg></div>
+        <h2>Ближайшие события</h2>
+      </div>
+      <div class="calSlot" data-mode="AGENDA" data-nav="0" data-height="300"></div>
     </div>
 
     <div class="card">
-      <h2>Последние изменения (GitHub)</h2>
-      <div id="commits">Загрузка…</div>
+      <div class="card-head">
+        <div class="ico"><svg viewBox="0 0 24 24"><path d="M10 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-8l-2-2z"/></svg></div>
+        <h2>Файлы</h2>
+      </div>
+      <iframe class="frame" id="driveFrame" height="260" title="Файлы"></iframe>
     </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div class="ico"><svg viewBox="0 0 24 24"><path d="M13 3a9 9 0 1 0 8.9 10h-2.02A7 7 0 1 1 13 5v4l5-5-5-5v4z" transform="translate(0 1)"/></svg></div>
+        <h2>Журнал изменений</h2>
+      </div>
+      <ul class="log" id="log"><li class="muted">Загрузка…</li></ul>
+    </div>
+
   </section>
 
-  <section id="calendar">
-    <div class="card">
-      <div class="calSlot" data-mode="MONTH" data-height="560"></div>
-      <div class="note">Если календарь не показывается, откройте его кнопкой «Календарь» вверху.</div>
+  <!-- КАЛЕНДАРЬ -->
+  <section class="tab" id="tab-calendar">
+    <div class="seg" id="seg">
+      <button data-mode="MONTH">Месяц</button>
+      <button data-mode="WEEK">Неделя</button>
+      <button data-mode="AGENDA">Список</button>
     </div>
+    <div class="card cal-card"><div class="calSlot" id="bigCal" data-mode="MONTH" data-nav="1" style="height:100%"></div></div>
   </section>
 
 </main>
 
+<nav class="tabbar">
+  <button class="on" data-tab="overview">
+    <svg viewBox="0 0 24 24"><path d="M3 3h8v8H3V3zm10 0h8v5h-8V3zM3 13h8v8H3v-8zm10-3h8v11h-8V10z"/></svg>Обзор
+  </button>
+  <button data-tab="calendar">
+    <svg viewBox="0 0 24 24"><path d="M7 2v2H5a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2V2h-2v2H9V2H7zm-2 8h14v9H5v-9z"/></svg>Календарь
+  </button>
+</nav>
+
+<!-- шторка со ссылками -->
+<div class="backdrop" id="backdrop"></div>
+<div class="sheet" id="sheet" role="dialog" aria-label="Ссылки и настройки">
+  <div class="grab"></div>
+  <h3>Открыть</h3>
+  <a class="row" id="linkDrive" target="_blank" rel="noopener">
+    <span class="ico"><svg viewBox="0 0 24 24"><path d="M10 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-8l-2-2z"/></svg></span>
+    <span>Папка на Диске<small>01 Личное</small></span><span class="arrow">↗</span>
+  </a>
+  <a class="row" id="linkCal" target="_blank" rel="noopener">
+    <span class="ico"><svg viewBox="0 0 24 24"><path d="M7 2v2H5a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2V2h-2v2H9V2H7zm-2 8h14v9H5v-9z"/></svg></span>
+    <span>Google Календарь<small>полная версия</small></span><span class="arrow">↗</span>
+  </a>
+  <a class="row" id="linkGit" target="_blank" rel="noopener">
+    <span class="ico"><svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 0 0-3.16 19.49c.5.09.68-.22.68-.48v-1.7c-2.78.6-3.37-1.34-3.37-1.34-.45-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.61.07-.61 1 .07 1.53 1.03 1.53 1.03.89 1.52 2.34 1.08 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.94 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.64 0 0 .84-.27 2.75 1.02a9.58 9.58 0 0 1 5 0c1.91-1.29 2.75-1.02 2.75-1.02.55 1.37.2 2.39.1 2.64.64.7 1.03 1.59 1.03 2.68 0 3.84-2.34 4.69-4.57 4.94.36.31.68.92.68 1.85v2.74c0 .27.18.58.69.48A10 10 0 0 0 12 2z"/></svg></span>
+    <span>GitHub<small>репозиторий 01-lichnoe</small></span><span class="arrow">↗</span>
+  </a>
+  <div id="resetWrap">
+    <h3 style="margin-top:14px">Настройки</h3>
+    <button class="row" id="resetCal">
+      <span class="ico"><svg viewBox="0 0 24 24"><path d="M17.7 6.3A8 8 0 1 0 20 12h-2a6 6 0 1 1-1.800-4.200L13 11h8V3l-3.300 3.300z"/></svg></span>
+      <span>Сменить календарь<small>ввести другой ID</small></span>
+    </button>
+  </div>
+</div>
+
 <script>
 // ===== НАСТРОЙКИ ПАНЕЛИ (меняются только здесь) =====
 var CONFIG = {
-  title: "01 Личное",
   githubUser: "htongrad",
   githubRepo: "01-lichnoe",
   driveFolderId: "188zha7cSRoGIz5X5UNqEIH0_aOqjMs71",
   calendarId: "",            // пусто = ID вводится один раз на телефоне и хранится только в нём
-  timezone: "Europe/Moscow"
+  timezone: "Europe/Moscow",
+  eventColor: "#4F7762"
 };
 // =====================================================
 
-function getCalendarId() {
-  if (CONFIG.calendarId) return CONFIG.calendarId;
-  try { return localStorage.getItem("calendarId") || ""; } catch (e) { return ""; }
+function store(k, v) {
+  try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) {}
+  return null;
+}
+function getCalendarId() { return CONFIG.calendarId || store("calendarId") || ""; }
+
+/* ---------- приветствие и дата ---------- */
+(function () {
+  var h = new Date().getHours();
+  var hello = h < 5 ? "Доброй ночи" : h < 12 ? "Доброе утро" : h < 18 ? "Добрый день" : "Добрый вечер";
+  document.getElementById("hello").textContent = hello;
+  var d = new Date().toLocaleDateString("ru-RU", { weekday: "long", day: "numeric", month: "long" });
+  document.getElementById("today").textContent = d.charAt(0).toUpperCase() + d.slice(1);
+})();
+
+/* ---------- календарь ---------- */
+function calendarUrl(id, mode, nav) {
+  return "https://calendar.google.com/calendar/embed?src=" + encodeURIComponent(id) +
+    "&color=" + encodeURIComponent(CONFIG.eventColor) +
+    "&bgcolor=%23ffffff&ctz=" + encodeURIComponent(CONFIG.timezone) +
+    "&mode=" + mode + "&wkst=2&hl=ru" +
+    "&showTitle=0&showPrint=0&showTz=0&showCalendars=0&showTabs=0" +
+    "&showNav=" + nav + "&showDate=" + nav;
 }
 
-function calendarUrl(id, mode) {
-  return "https://calendar.google.com/calendar/embed?src=" + encodeURIComponent(id) +
-    "&ctz=" + encodeURIComponent(CONFIG.timezone) +
-    "&mode=" + mode + "&hl=ru&showTitle=0&showPrint=0&showTz=0&showCalendars=0";
+function setupForm() {
+  var box = document.createElement("div");
+  box.className = "setup";
+  box.innerHTML = "<p>Вставьте ID календаря. Для основного календаря это адрес вашей почты Google. Он сохранится только на этом телефоне.</p>";
+  var input = document.createElement("input");
+  input.className = "field"; input.type = "text"; input.placeholder = "ID календаря";
+  input.autocapitalize = "off"; input.autocomplete = "off";
+  var btn = document.createElement("button");
+  btn.className = "btn"; btn.textContent = "Сохранить";
+  btn.onclick = function () {
+    var v = input.value.trim();
+    if (!v) return;
+    store("calendarId", v);
+    buildCalendars(); setLinks();
+  };
+  box.appendChild(input); box.appendChild(btn);
+  return box;
 }
 
 function buildCalendars() {
@@ -183,36 +367,39 @@ function buildCalendars() {
   for (var i = 0; i < slots.length; i++) {
     var slot = slots[i];
     slot.innerHTML = "";
-    if (!id) {
-      var p = document.createElement("div");
-      p.textContent = "Вставьте ID календаря (для основного календаря это адрес вашей почты Google). Он сохранится только на этом телефоне.";
-      var input = document.createElement("input");
-      input.type = "text";
-      input.placeholder = "ID календаря";
-      var btn = document.createElement("button");
-      btn.className = "btn";
-      btn.textContent = "Сохранить";
-      btn.onclick = (function (inp) {
-        return function () {
-          var v = inp.value.trim();
-          if (!v) return;
-          try { localStorage.setItem("calendarId", v); } catch (e) {}
-          buildCalendars();
-          setLinks();
-        };
-      })(input);
-      slot.appendChild(p);
-      slot.appendChild(input);
-      slot.appendChild(btn);
-    } else {
-      var f = document.createElement("iframe");
-      f.src = calendarUrl(id, slot.getAttribute("data-mode"));
-      f.height = slot.getAttribute("data-height");
-      slot.appendChild(f);
-    }
+    if (!id) { slot.appendChild(setupForm()); continue; }
+    var f = document.createElement("iframe");
+    f.className = "frame";
+    f.title = "Календарь";
+    f.src = calendarUrl(id, slot.getAttribute("data-mode"), slot.getAttribute("data-nav"));
+    var h = slot.getAttribute("data-height");
+    if (h) f.height = h; else f.style.height = "100%";
+    slot.appendChild(f);
   }
+  document.getElementById("resetWrap").style.display = (CONFIG.calendarId || !id) ? "none" : "";
 }
 
+function setupSegment() {
+  var seg = document.getElementById("seg");
+  var big = document.getElementById("bigCal");
+  var saved = store("calMode");
+  if (saved === "MONTH" || saved === "WEEK" || saved === "AGENDA") big.setAttribute("data-mode", saved);
+  function mark() {
+    var m = big.getAttribute("data-mode");
+    var b = seg.querySelectorAll("button");
+    for (var i = 0; i < b.length; i++) b[i].classList.toggle("on", b[i].getAttribute("data-mode") === m);
+  }
+  seg.onclick = function (e) {
+    var t = e.target.closest("button");
+    if (!t) return;
+    big.setAttribute("data-mode", t.getAttribute("data-mode"));
+    store("calMode", t.getAttribute("data-mode"));
+    mark(); buildCalendars();
+  };
+  mark();
+}
+
+/* ---------- ссылки ---------- */
 function setLinks() {
   document.getElementById("linkDrive").href = "https://drive.google.com/drive/folders/" + CONFIG.driveFolderId;
   document.getElementById("linkGit").href = "https://github.com/" + CONFIG.githubUser + "/" + CONFIG.githubRepo;
@@ -222,14 +409,34 @@ function setLinks() {
     : "https://calendar.google.com/calendar/r";
 }
 
+/* ---------- файлы ---------- */
 function loadDrive() {
   document.getElementById("driveFrame").src =
     "https://drive.google.com/embeddedfolderview?id=" + CONFIG.driveFolderId + "#list";
 }
 
+/* ---------- журнал изменений ---------- */
+function plural(n, f) {
+  var a = Math.abs(n) % 100, b = a % 10;
+  if (a > 10 && a < 20) return f[2];
+  if (b > 1 && b < 5) return f[1];
+  if (b === 1) return f[0];
+  return f[2];
+}
+function ago(date) {
+  var s = (Date.now() - date.getTime()) / 1000;
+  if (s < 60) return "только что";
+  var m = Math.floor(s / 60);
+  if (m < 60) return m + " " + plural(m, ["минуту", "минуты", "минут"]) + " назад";
+  var h = Math.floor(m / 60);
+  if (h < 24) return h + " " + plural(h, ["час", "часа", "часов"]) + " назад";
+  var d = Math.floor(h / 24);
+  return d + " " + plural(d, ["день", "дня", "дней"]) + " назад";
+}
+
 function loadCommits() {
-  var box = document.getElementById("commits");
-  var url = "https://api.github.com/repos/" + CONFIG.githubUser + "/" + CONFIG.githubRepo + "/commits?per_page=5";
+  var log = document.getElementById("log");
+  var url = "https://api.github.com/repos/" + CONFIG.githubUser + "/" + CONFIG.githubRepo + "/commits?per_page=30";
   fetch(url)
     .then(function (r) {
       if (r.status === 409) return [];
@@ -237,39 +444,64 @@ function loadCommits() {
       return r.json();
     })
     .then(function (list) {
-      if (!list.length) { box.textContent = "Пока нет изменений."; return; }
-      box.innerHTML = "";
-      list.forEach(function (c) {
-        var d = document.createElement("div");
-        d.className = "commit";
-        var msg = (c.commit.message || "").split("\n")[0];
-        d.textContent = msg;
+      if (!list.length) {
+        log.innerHTML = '<li class="muted">Пока нет изменений.</li>';
+        return;
+      }
+      var monthAgo = Date.now() - 30 * 86400000, n = 0;
+      list.forEach(function (c) { if (new Date(c.commit.author.date).getTime() > monthAgo) n++; });
+      document.getElementById("tileLast").textContent = ago(new Date(list[0].commit.author.date));
+      document.getElementById("tileCount").textContent = n;
+
+      log.innerHTML = "";
+      list.slice(0, 5).forEach(function (c) {
+        var li = document.createElement("li");
+        li.textContent = (c.commit.message || "").split("\n")[0];
         var s = document.createElement("small");
-        s.textContent = new Date(c.commit.author.date).toLocaleString("ru-RU");
-        d.appendChild(s);
-        box.appendChild(d);
+        s.textContent = ago(new Date(c.commit.author.date));
+        li.appendChild(s);
+        log.appendChild(li);
       });
     })
     .catch(function () {
-      box.textContent = "Не удалось загрузить. Откройте репозиторий кнопкой GitHub вверху.";
+      log.innerHTML = '<li class="muted">Не удалось загрузить журнал.</li>';
     });
 }
 
+/* ---------- вкладки ---------- */
+function showTab(name) {
+  var tabs = document.querySelectorAll(".tab");
+  for (var i = 0; i < tabs.length; i++) tabs[i].classList.toggle("active", tabs[i].id === "tab-" + name);
+  var btns = document.querySelectorAll(".tabbar button");
+  for (var j = 0; j < btns.length; j++) btns[j].classList.toggle("on", btns[j].getAttribute("data-tab") === name);
+  store("tab", name);
+  window.scrollTo(0, 0);
+}
 function setupTabs() {
-  var buttons = document.querySelectorAll("nav button");
-  for (var i = 0; i < buttons.length; i++) {
-    buttons[i].onclick = function () {
-      var tab = this.getAttribute("data-tab");
-      var all = document.querySelectorAll("nav button, section");
-      for (var j = 0; j < all.length; j++) all[j].classList.remove("active");
-      this.classList.add("active");
-      document.getElementById(tab).classList.add("active");
-    };
+  var btns = document.querySelectorAll(".tabbar button");
+  for (var i = 0; i < btns.length; i++) {
+    btns[i].onclick = function () { showTab(this.getAttribute("data-tab")); };
   }
+  var saved = store("tab");
+  if (saved === "calendar" || saved === "overview") showTab(saved);
 }
 
-document.title = CONFIG.title;
+/* ---------- шторка ---------- */
+function setupSheet() {
+  var sheet = document.getElementById("sheet"), back = document.getElementById("backdrop");
+  function open(v) { sheet.classList.toggle("open", v); back.classList.toggle("open", v); }
+  document.getElementById("menuBtn").onclick = function () { open(true); };
+  back.onclick = function () { open(false); };
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape") open(false); });
+  document.getElementById("resetCal").onclick = function () {
+    store("calendarId", null);
+    open(false); buildCalendars(); setLinks();
+  };
+}
+
 setupTabs();
+setupSegment();
+setupSheet();
 setLinks();
 buildCalendars();
 loadDrive();
