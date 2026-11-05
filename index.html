@@ -26,6 +26,7 @@
     --accent: #7E9B88;         /* пыльный зелёный */
     --accent-strong: #486A57;  /* для текста, линий и кнопок */
     --accent-soft: #E6EDE7;
+    --danger: #A4423B;
     --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
     --sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     --r: 12px;
@@ -40,6 +41,7 @@
     -webkit-font-smoothing: antialiased; overscroll-behavior-y: none;
   }
   button { font: inherit; color: inherit; }
+  button:disabled { opacity: .5; }
   svg.i { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; flex: none; }
   svg.i.solid { fill: currentColor; stroke: none; }
 
@@ -56,13 +58,14 @@
   .brand::before { content: ""; width: 3px; height: 18px; background: var(--accent); border-radius: 2px; }
   .icon-btn {
     width: 40px; height: 40px; border-radius: 10px; border: 0; background: transparent;
-    color: var(--muted); display: grid; place-items: center; cursor: pointer; margin-right: -8px;
+    color: var(--muted); display: grid; place-items: center; cursor: pointer;
   }
   .icon-btn:active { background: var(--accent-soft); }
+  #menuBtn { margin-right: -8px; }
 
   /* ---------- контент ---------- */
   main { padding: 20px 16px calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 24px); max-width: 720px; margin: 0 auto; }
-  body.editing main { padding-bottom: 24px; }
+  body.n-edit main, body.e-edit main { padding-bottom: 24px; }
   .tab { display: none; }
   .tab.active { display: block; animation: rise .22s ease both; }
   @keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
@@ -72,17 +75,19 @@
     background: var(--surface); border: 1px solid var(--line); border-radius: var(--r);
     padding: 16px; margin-bottom: 14px;
   }
-  .card-head { display: flex; align-items: center; justify-content: space-between; margin: 0 0 12px; }
+  .card-head { display: flex; align-items: center; justify-content: space-between; margin: 0 0 12px; gap: 10px; }
   .text-btn { border: 0; background: transparent; color: var(--accent-strong); font-weight: 600; font-size: 13px; padding: 4px 0; cursor: pointer; }
+  .muted { color: var(--muted); font-size: 14px; }
+  .muted.small { font-size: 12px; margin-top: 8px; }
 
   /* заголовок страницы (без карточки) */
   .hero { padding: 4px 2px 22px; }
   .hero .hello { color: var(--accent-strong); }
   .hero .date { font-family: var(--serif); font-weight: 500; font-size: 32px; line-height: 1.15; letter-spacing: -.4px; margin: 8px 0 20px; }
   .stats { display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
-  .stat { padding: 14px 0 14px; }
+  .stat { padding: 14px 0; }
   .stat + .stat { border-left: 1px solid var(--line); padding-left: 16px; }
-  .stat .v { font-family: var(--serif); font-weight: 600; font-size: 21px; color: var(--accent-strong); }
+  .stat .v { font-family: var(--serif); font-weight: 600; font-size: 24px; color: var(--accent-strong); line-height: 1.2; }
   .stat .l { font-size: 12px; color: var(--muted); margin-top: 1px; }
 
   .frame { width: 100%; border: 0; display: block; border-radius: 8px; background: var(--surface); }
@@ -95,35 +100,106 @@
   .log li::after { content: ""; position: absolute; left: 4px; top: 17px; bottom: -3px; width: 1px; background: var(--line); }
   .log li:last-child::after { display: none; }
   .log small { display: block; color: var(--muted); font-weight: 400; font-size: 12px; margin-top: 1px; }
-  .muted { color: var(--muted); font-size: 14px; }
 
-  /* форма ID календаря */
-  .setup { text-align: center; padding: 14px 4px; }
-  .setup p { margin: 0 0 14px; color: var(--muted); font-size: 14px; }
+  /* поля и кнопки */
   .field {
-    width: 100%; padding: 13px 14px; font: inherit; font-size: 16px; border: 1px solid var(--line);
+    display: block; width: 100%; min-width: 0; padding: 13px 14px; font: inherit; font-size: 16px; border: 1px solid var(--line);
     border-radius: 10px; background: var(--bg); color: var(--text); margin-bottom: 10px; outline: none;
   }
   .field:focus { border-color: var(--accent-strong); }
+  textarea.field { resize: vertical; line-height: 1.5; }
   .btn { width: 100%; padding: 13px; border: 0; border-radius: 10px; background: var(--accent-strong); color: #fff; font-weight: 600; font-size: 15px; cursor: pointer; }
   .btn:active { opacity: .88; }
-
-  /* календарь */
-  .seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 3px; margin-bottom: 12px; }
-  .seg button { border: 0; background: transparent; padding: 9px 0; border-radius: 7px; font-weight: 600; font-size: 13px; color: var(--muted); cursor: pointer; }
-  .seg button.on { background: var(--accent-strong); color: #fff; }
-  .cal-card { padding: 0; overflow: hidden; margin-bottom: 0;
-    height: calc(100vh - 230px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
-    height: calc(100dvh - 230px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); min-height: 420px; }
-  .cal-card .frame { height: 100%; border-radius: 0; }
-  .cal-card .setup { padding-top: 40px; }
-
-  /* заметки */
-  .notes-head { display: flex; align-items: flex-end; justify-content: space-between; margin: 0 2px 14px; }
-  .notes-head h2 { margin: 0; font-family: var(--serif); font-weight: 500; font-size: 28px; letter-spacing: -.3px; line-height: 1.1; }
+  .btn.ghost { background: transparent; color: var(--accent-strong); border: 1px solid var(--accent-strong); }
   .pill { border: 1px solid var(--accent-strong); color: var(--accent-strong); background: transparent; padding: 8px 14px; border-radius: 10px; font-weight: 600; font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
   .pill:active { background: var(--accent-soft); }
   .pill svg.i { width: 16px; height: 16px; stroke-width: 2; }
+
+  /* приглашение войти */
+  .auth { text-align: center; }
+  .auth p { margin: 0 0 14px; color: var(--muted); font-size: 14px; }
+  .auth.compact { text-align: left; }
+  .auth.compact p { margin-bottom: 10px; }
+
+  /* шапки вкладок */
+  .page-head { display: flex; align-items: flex-end; justify-content: space-between; margin: 0 2px 14px; }
+  .page-head h2 { margin: 0; font-family: var(--serif); font-weight: 500; font-size: 28px; letter-spacing: -.3px; line-height: 1.1; }
+
+  /* ---------- календарь ---------- */
+  .seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 3px; margin-bottom: 12px; }
+  .seg button { border: 0; background: transparent; padding: 9px 0; border-radius: 7px; font-weight: 600; font-size: 13px; color: var(--muted); cursor: pointer; }
+  .seg button.on { background: var(--accent-strong); color: #fff; }
+  .nav { display: flex; align-items: center; gap: 4px; margin: 0 0 12px; }
+  .nav:empty { display: none; }
+  .nav .navtitle { flex: 1; font-family: var(--serif); font-weight: 500; font-size: 20px; padding-left: 4px; }
+  .nav .icon-btn { width: 36px; height: 36px; color: var(--accent-strong); }
+
+  .mgrid-card { padding: 0; overflow: hidden; }
+  .mgrid { display: grid; grid-template-columns: repeat(7, 1fr); }
+  .mh { text-align: center; font-size: 11px; font-weight: 600; color: var(--muted); padding: 9px 0; letter-spacing: .06em; border-bottom: 1px solid var(--line); }
+  .mc { height: 54px; border: 0; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); background: transparent; display: flex; flex-direction: column; align-items: center; padding: 5px 0 0; cursor: pointer; }
+  .mc:nth-child(7n) { border-right: 0; }
+  .mc:nth-last-child(-n+7) { border-bottom: 0; }
+  .mc .n { font-size: 14px; font-weight: 500; width: 26px; height: 26px; display: grid; place-items: center; border-radius: 50%; }
+  .mc.other .n { color: #AEB7B0; }
+  .mc.today .n { background: var(--accent-strong); color: #fff; font-weight: 600; }
+  .mc.sel { background: var(--accent-soft); }
+  .mc .dots { display: flex; gap: 3px; margin-top: 4px; height: 5px; }
+  .mc .dots i { width: 5px; height: 5px; border-radius: 50%; background: var(--accent); }
+
+  .evrow { display: flex; gap: 12px; width: 100%; text-align: left; background: transparent; border: 0; border-bottom: 1px solid var(--line); padding: 12px 0; cursor: pointer; align-items: stretch; }
+  .evrow:last-child { border-bottom: 0; padding-bottom: 0; }
+  .evrow:first-of-type { padding-top: 0; }
+  .evtime { width: 58px; flex: none; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .evtime .b { color: var(--muted); font-weight: 400; }
+  .evbar { width: 3px; border-radius: 2px; background: var(--accent); flex: none; }
+  .evmain { min-width: 0; flex: 1; }
+  .evt { font-weight: 600; font-size: 15px; overflow-wrap: anywhere; }
+  .evloc { color: var(--muted); font-size: 13px; }
+
+  .wday + .wday { border-top: 1px solid var(--line); margin-top: 12px; padding-top: 12px; }
+  .wh { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .wh .d { font-weight: 600; font-size: 14px; }
+  .wday.today .wh .d { color: var(--accent-strong); }
+  .wday .none { color: #9AA39C; font-size: 14px; }
+  .dgh { margin: 18px 2px 8px; }
+  .dgh:first-child { margin-top: 0; }
+  .dgh.today { color: var(--accent-strong); }
+  .more { margin-top: 4px; }
+
+  /* строки событий на обзоре */
+  .ovrow { display: flex; gap: 12px; width: 100%; text-align: left; background: transparent; border: 0; border-bottom: 1px solid var(--line); padding: 11px 0; cursor: pointer; }
+  .ovrow:first-child { padding-top: 0; }
+  .ovrow:last-of-type { border-bottom: 0; }
+  .ovd { width: 78px; flex: none; font-size: 13px; font-weight: 600; color: var(--accent-strong); }
+
+  /* редактор события */
+  #eventEditor, #noteEditor { display: none; }
+  body.e-edit #calView, body.n-edit #noteListView { display: none; }
+  body.e-edit #eventEditor, body.n-edit #noteEditor { display: block; }
+  body.n-edit .tabbar, body.e-edit .tabbar { display: none; }
+  body.n-edit .toast, body.e-edit .toast { bottom: 24px; }
+  .ed-bar { display: flex; align-items: center; justify-content: space-between; margin: 0 -6px 10px; }
+  .ed-bar button { border: 0; background: transparent; color: var(--accent-strong); font-weight: 600; font-size: 14px; padding: 8px 6px; display: inline-flex; align-items: center; gap: 4px; cursor: pointer; border-radius: 8px; }
+  .ed-bar button.danger { color: var(--muted); }
+  .ed-bar button.danger.armed { color: var(--danger); }
+  .ed-bar button:active { background: var(--accent-soft); }
+  .ed-bar svg.i { width: 20px; height: 20px; }
+  .form .field.title { font-size: 18px; font-weight: 600; }
+  .swrow { display: flex; justify-content: space-between; align-items: center; padding: 4px 0 14px; font-weight: 500; }
+  .swrow input { appearance: none; -webkit-appearance: none; width: 46px; height: 28px; margin: 0; border-radius: 14px; background: var(--line); position: relative; outline: 0; border: 0; cursor: pointer; transition: background .2s; }
+  .swrow input::after { content: ""; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: #fff; transition: transform .2s; box-shadow: 0 1px 2px rgba(0,0,0,.22); }
+  .swrow input:checked { background: var(--accent-strong); }
+  .swrow input:checked::after { transform: translateX(18px); }
+  .dt { display: grid; grid-template-columns: 1.4fr 1fr; gap: 8px; }
+  .dt .label { grid-column: 1 / -1; margin-bottom: 6px; }
+  .form.allday .dt { grid-template-columns: 1fr; }
+  .form.allday .dt input[type=time] { display: none; }
+  .form .muted.small { margin: -2px 0 12px; }
+
+  /* ---------- заметки ---------- */
+  .sync-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: -4px 2px 14px; }
+  .sync-row .muted { font-size: 12px; }
   .note-list { padding: 0; overflow: hidden; }
   .note-item { display: block; width: 100%; text-align: left; background: transparent; border: 0; border-bottom: 1px solid var(--line); padding: 14px 16px; cursor: pointer; }
   .note-item:last-child { border-bottom: 0; }
@@ -131,20 +207,12 @@
   .note-item .t { font-weight: 600; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .note-item .p { color: var(--muted); font-size: 14px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-top: 2px; }
   .note-item .d { color: var(--muted); font-size: 12px; margin-top: 4px; }
-  .note-item.compact { padding: 11px 0; display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }
+  .note-item.compact { padding: 11px 0; display: flex; justify-content: space-between; gap: 12px; align-items: baseline; border-bottom: 1px solid var(--line); }
+  .note-item.compact:first-child { padding-top: 0; }
+  .note-item.compact:last-child { border-bottom: 0; padding-bottom: 0; }
   .note-item.compact .t { flex: 1; min-width: 0; font-weight: 500; }
   .note-item.compact .d { margin: 0; flex: none; }
   .empty { padding: 28px 16px; text-align: center; color: var(--muted); font-size: 14px; }
-
-  #noteEditor { display: none; }
-  body.editing #noteListView { display: none; }
-  body.editing #noteEditor { display: block; }
-  .ed-bar { display: flex; align-items: center; justify-content: space-between; margin: 0 -6px 10px; }
-  .ed-bar button { border: 0; background: transparent; color: var(--accent-strong); font-weight: 600; font-size: 14px; padding: 8px 6px; display: inline-flex; align-items: center; gap: 4px; cursor: pointer; border-radius: 8px; }
-  .ed-bar button.danger { color: var(--muted); }
-  .ed-bar button.danger.armed { color: #A4423B; }
-  .ed-bar button:active { background: var(--accent-soft); }
-  .ed-bar svg.i { width: 20px; height: 20px; }
   #noteText {
     display: block; width: 100%; border: 1px solid var(--line); border-radius: var(--r); background: var(--surface);
     padding: 16px; font: inherit; font-size: 17px; line-height: 1.6; color: var(--text); resize: none; outline: none;
@@ -161,7 +229,6 @@
     background: rgba(241, 243, 239, .94); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
     border-top: 1px solid var(--line);
   }
-  body.editing .tabbar { display: none; }
   .tabbar button {
     position: relative; height: var(--tabbar-h); border: 0; background: transparent; cursor: pointer;
     display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
@@ -170,19 +237,20 @@
   .tabbar button.on { color: var(--accent-strong); }
   .tabbar button.on::before { content: ""; position: absolute; top: -1px; left: 32%; right: 32%; height: 2px; background: var(--accent-strong); }
 
-  /* шторка */
+  /* шторки */
   .backdrop { position: fixed; inset: 0; z-index: 40; background: rgba(20, 30, 24, .34); opacity: 0; pointer-events: none; transition: opacity .2s; }
   .backdrop.open { opacity: 1; pointer-events: auto; }
   .sheet {
     position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; max-width: 720px; margin: 0 auto;
     background: var(--surface); border-radius: 16px 16px 0 0; border-top: 1px solid var(--line);
-    padding: 10px 20px calc(env(safe-area-inset-bottom) + 16px);
-    transform: translateY(105%); transition: transform .26s cubic-bezier(.2,.8,.2,1);
+    padding: 10px 20px calc(env(safe-area-inset-bottom) + 16px); max-height: 90vh; overflow-y: auto;
+    transform: translateY(105%); transition: transform .26s cubic-bezier(.2,.8,.2,1); visibility: hidden;
   }
-  .sheet.open { transform: none; }
+  .sheet.open { transform: none; visibility: visible; }
   .grab { width: 36px; height: 3px; border-radius: 2px; background: var(--line); margin: 0 auto 16px; }
-  .sheet .label { margin: 0 0 4px; }
+  .sheet .label { display: block; margin: 0 0 4px; }
   .sheet .label.gap { margin-top: 18px; }
+  .sheet p { margin: 8px 0 12px; }
   .row {
     display: flex; align-items: center; gap: 14px; width: 100%; padding: 13px 0; border: 0; border-bottom: 1px solid var(--line);
     background: transparent; text-align: left; text-decoration: none; color: var(--text); font-weight: 500; font-size: 15px; cursor: pointer;
@@ -191,14 +259,14 @@
   .row svg.i { color: var(--accent-strong); }
   .row small { display: block; color: var(--muted); font-weight: 400; font-size: 12px; }
   .row .arrow { margin-left: auto; color: var(--muted); font-size: 14px; }
+  .sheet .btn { margin-top: 4px; }
 
   .toast {
     position: fixed; left: 50%; bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 18px); transform: translate(-50%, 10px);
     background: var(--text); color: #fff; padding: 10px 16px; border-radius: 10px; font-size: 14px; font-weight: 500;
-    opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; z-index: 60; white-space: nowrap;
+    opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; z-index: 60; max-width: calc(100% - 32px); text-align: center;
   }
   .toast.show { opacity: 1; transform: translate(-50%, 0); }
-  body.editing .toast { bottom: 24px; }
 
   @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 </style>
@@ -221,14 +289,14 @@
       <div class="label hello" id="hello">Здравствуйте</div>
       <div class="date" id="today">&nbsp;</div>
       <div class="stats">
-        <div class="stat"><div class="v" id="tileLast">—</div><div class="l">последнее обновление</div></div>
-        <div class="stat"><div class="v" id="tileCount">—</div><div class="l">обновлений за 30 дней</div></div>
+        <div class="stat"><div class="v" id="statToday">—</div><div class="l">событий сегодня</div></div>
+        <div class="stat"><div class="v" id="statNotes">0</div><div class="l">заметок</div></div>
       </div>
     </div>
 
     <div class="card">
-      <div class="card-head"><span class="label">Ближайшие события</span></div>
-      <div class="calSlot" data-mode="AGENDA" data-nav="0" data-height="300"></div>
+      <div class="card-head"><span class="label">Ближайшие события</span><button class="text-btn" id="allEvents">Все</button></div>
+      <div id="upcoming"></div>
     </div>
 
     <div class="card">
@@ -250,21 +318,47 @@
 
   <!-- КАЛЕНДАРЬ -->
   <section class="tab" id="tab-calendar">
-    <div class="seg" id="seg">
-      <button data-mode="AGENDA">Список</button>
-      <button data-mode="WEEK">Неделя</button>
-      <button data-mode="MONTH">Месяц</button>
+    <div id="calView">
+      <div class="page-head">
+        <h2>Календарь</h2>
+        <button class="pill" id="newEvent"><svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Событие</button>
+      </div>
+      <div class="seg" id="seg">
+        <button data-mode="AGENDA">Список</button>
+        <button data-mode="WEEK">Неделя</button>
+        <button data-mode="MONTH">Месяц</button>
+      </div>
+      <div id="calAuth"></div>
+      <div class="nav" id="calNav"></div>
+      <div id="calBody"></div>
     </div>
-    <div class="card cal-card"><div class="calSlot" id="bigCal" data-mode="MONTH" data-nav="1" style="height:100%"></div></div>
+
+    <div id="eventEditor">
+      <div class="ed-bar">
+        <button id="evBack"><svg class="i" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>Календарь</button>
+        <button class="danger" id="evDel"><svg class="i" viewBox="0 0 24 24"><path d="M4.5 7h15M9.5 7V4.5h5V7M6.5 7l1 13h9l1-13M10 11v5M14 11v5"/></svg><span id="evDelText">Удалить</span></button>
+      </div>
+      <div class="card form" id="evForm">
+        <input class="field title" id="evTitle" type="text" placeholder="Название" autocomplete="off">
+        <label class="swrow"><span>Весь день</span><input type="checkbox" id="evAllDay"></label>
+        <div class="dt"><span class="label">Начало</span><input class="field" type="date" id="evStartDate"><input class="field" type="time" id="evStartTime"></div>
+        <div class="dt"><span class="label">Конец</span><input class="field" type="date" id="evEndDate"><input class="field" type="time" id="evEndTime"></div>
+        <input class="field" id="evLoc" type="text" placeholder="Место" autocomplete="off">
+        <textarea class="field" id="evDesc" rows="4" placeholder="Описание"></textarea>
+        <div class="muted small" id="evNote"></div>
+        <button class="btn" id="evSave">Сохранить</button>
+      </div>
+    </div>
   </section>
 
   <!-- ЗАМЕТКИ -->
   <section class="tab" id="tab-notes">
     <div id="noteListView">
-      <div class="notes-head">
+      <div class="page-head">
         <h2>Заметки</h2>
         <button class="pill" id="newNote"><svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Новая</button>
       </div>
+      <div class="sync-row"><span class="muted" id="syncText"></span><button class="text-btn" id="syncBtn">Синхронизировать</button></div>
       <div class="card note-list" id="noteList"></div>
     </div>
     <div id="noteEditor">
@@ -292,11 +386,12 @@
 
 <div class="toast" id="toast"></div>
 
-<!-- шторка со ссылками -->
 <div class="backdrop" id="backdrop"></div>
+
+<!-- меню -->
 <div class="sheet" id="sheet" role="dialog" aria-label="Ссылки и настройки">
   <div class="grab"></div>
-  <div class="label">Открыть</div>
+  <span class="label">Открыть</span>
   <a class="row" id="linkDrive" target="_blank" rel="noopener">
     <svg class="i" viewBox="0 0 24 24"><path d="M3.5 7a2 2 0 0 1 2-2h4l2 2.5h7a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/></svg>
     <span>Папка на Диске<small>01 Личное</small></span><span class="arrow">↗</span>
@@ -309,393 +404,996 @@
     <svg class="i solid" viewBox="0 0 24 24"><path d="M12 2a10 10 0 0 0-3.16 19.49c.5.09.68-.22.68-.48v-1.7c-2.78.6-3.37-1.34-3.37-1.34-.45-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.61.07-.61 1 .07 1.53 1.03 1.53 1.03.89 1.52 2.34 1.08 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.94 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.64 0 0 .84-.27 2.75 1.02a9.58 9.58 0 0 1 5 0c1.91-1.29 2.75-1.02 2.75-1.02.55 1.37.2 2.39.1 2.64.64.7 1.03 1.59 1.03 2.68 0 3.84-2.34 4.69-4.57 4.94.36.31.68.92.68 1.85v2.74c0 .27.18.58.69.48A10 10 0 0 0 12 2z"/></svg>
     <span>GitHub<small>репозиторий 01-lichnoe</small></span><span class="arrow">↗</span>
   </a>
-  <div class="label gap">Настройки</div>
+  <span class="label gap">Настройки</span>
+  <button class="row" id="rowAccount">
+    <svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="8.5" r="3.5"/><path d="M5 20c0-3.6 3-6 7-6s7 2.4 7 6"/></svg>
+    <span>Аккаунт Google<small id="accStatus">Не подключено</small></span>
+  </button>
+  <button class="row" id="rowSync">
+    <svg class="i" viewBox="0 0 24 24"><path d="M20 8a8 8 0 0 0-14.5-2M4 16a8 8 0 0 0 14.5 2"/><path d="M20 3v5h-5M4 21v-5h5"/></svg>
+    <span>Синхронизировать заметки<small>с папкой на Диске</small></span>
+  </button>
   <button class="row" id="copyNotes">
     <svg class="i" viewBox="0 0 24 24"><rect x="8.5" y="8.5" width="11" height="11" rx="2"/><path d="M15.5 8.5V6.5a2 2 0 0 0-2-2h-7a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h2"/></svg>
-    <span>Копировать все заметки<small>для резервной копии</small></span>
+    <span>Копировать все заметки<small>в буфер обмена</small></span>
   </button>
-  <div id="resetWrap">
-    <button class="row" id="resetCal">
-      <svg class="i" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.5-5.8"/><path d="M4 4v4.5h4.5"/></svg>
-      <span>Сменить календарь<small>ввести другой ID</small></span>
-    </button>
-  </div>
+</div>
+
+<!-- подключение Google -->
+<div class="sheet" id="connect" role="dialog" aria-label="Подключение Google">
+  <div class="grab"></div>
+  <span class="label">Подключение Google</span>
+  <div id="connectBody"></div>
 </div>
 
 <script>
-// ===== НАСТРОЙКИ ПАНЕЛИ (меняются только здесь) =====
+// ===== НАСТРОЙКИ ПАНЕЛИ (для других панелей меняются только здесь) =====
 var CONFIG = {
+  panel: "01",                                   // префикс хранилища: у каждой панели свой
   githubUser: "htongrad",
   githubRepo: "01-lichnoe",
   driveFolderId: "188zha7cSRoGIz5X5UNqEIH0_aOqjMs71",
-  calendarId: "",            // пусто = ID вводится один раз на телефоне и хранится только в нём
-  timezone: "Europe/Moscow",
-  eventColor: "#486A57"
+  calendarId: "primary",                         // основной календарь
+  clientId: "",                                  // Client ID из Google Cloud (можно вписать сюда или в панели)
+  notesFile: "zametki-sync.json",                // файл синхронизации в папке на Диске
+  notesBackup: "Заметки (копия).txt"             // читаемая копия
 };
-// =====================================================
+// ========================================================================
 
-function store(k, v) {
-  try {
-    if (v === undefined) return localStorage.getItem(k);
-    if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v);
-  } catch (e) {}
-  return null;
+var SCOPE_LIST = ["https://www.googleapis.com/auth/calendar.events", "https://www.googleapis.com/auth/drive"];
+var SCOPES = SCOPE_LIST.join(" ");
+var PREFIX = "p" + CONFIG.panel + "_";
+
+/* ---------- мелкие помощники ---------- */
+const $ = (id) => document.getElementById(id);
+function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+const pad = (n) => String(n).padStart(2, "0");
+const ymd = (d) => d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+const hm = (d) => pad(d.getHours()) + ":" + pad(d.getMinutes());
+const sod = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+const addDay = (d, n) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
+const parseYmd = (s) => { const p = s.split("-").map(Number); return new Date(p[0], p[1] - 1, p[2]); };
+const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+const fmt = (d, o) => d.toLocaleDateString("ru-RU", o);
+function rfc(d) {
+  const off = -d.getTimezoneOffset(), a = Math.abs(off);
+  return ymd(d) + "T" + hm(d) + ":" + pad(d.getSeconds()) + (off >= 0 ? "+" : "-") + pad(Math.floor(a / 60)) + ":" + pad(a % 60);
 }
-function getCalendarId() { return CONFIG.calendarId || store("calendarId") || ""; }
-
-var toastTimer;
-function toast(text) {
-  var t = document.getElementById("toast");
-  t.textContent = text; t.classList.add("show");
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(function () { t.classList.remove("show"); }, 2200);
+function fmtDate(ts) {
+  const d = new Date(ts), n = new Date();
+  if (d.toDateString() === n.toDateString()) return hm(d);
+  return fmt(d, { day: "numeric", month: "short" });
 }
-
-/* ---------- приветствие и дата ---------- */
-(function () {
-  var h = new Date().getHours();
-  document.getElementById("hello").textContent =
-    h < 5 ? "Доброй ночи" : h < 12 ? "Доброе утро" : h < 18 ? "Добрый день" : "Добрый вечер";
-  var d = new Date().toLocaleDateString("ru-RU", { weekday: "long", day: "numeric", month: "long" });
-  document.getElementById("today").textContent = d.charAt(0).toUpperCase() + d.slice(1);
-})();
-
-/* ---------- календарь ---------- */
-function calendarUrl(id, mode, nav) {
-  return "https://calendar.google.com/calendar/embed?src=" + encodeURIComponent(id) +
-    "&color=" + encodeURIComponent(CONFIG.eventColor) +
-    "&bgcolor=%23ffffff&ctz=" + encodeURIComponent(CONFIG.timezone) +
-    "&mode=" + mode + "&wkst=2&hl=ru" +
-    "&showTitle=0&showPrint=0&showTz=0&showCalendars=0&showTabs=0" +
-    "&showNav=" + nav + "&showDate=" + nav;
-}
-
-function setupForm() {
-  var box = document.createElement("div");
-  box.className = "setup";
-  box.innerHTML = "<p>Вставьте ID календаря. Для основного календаря это адрес вашей почты Google. Он сохранится только на этом телефоне.</p>";
-  var input = document.createElement("input");
-  input.className = "field"; input.type = "text"; input.placeholder = "ID календаря";
-  input.autocapitalize = "off"; input.autocomplete = "off";
-  var btn = document.createElement("button");
-  btn.className = "btn"; btn.textContent = "Сохранить";
-  btn.onclick = function () {
-    var v = input.value.trim();
-    if (!v) return;
-    store("calendarId", v);
-    buildCalendars(); setLinks();
-  };
-  box.appendChild(input); box.appendChild(btn);
-  return box;
-}
-
-function buildCalendars() {
-  var id = getCalendarId();
-  var slots = document.querySelectorAll(".calSlot");
-  for (var i = 0; i < slots.length; i++) {
-    var slot = slots[i];
-    slot.innerHTML = "";
-    if (!id) { slot.appendChild(setupForm()); continue; }
-    var f = document.createElement("iframe");
-    f.className = "frame"; f.title = "Календарь";
-    f.src = calendarUrl(id, slot.getAttribute("data-mode"), slot.getAttribute("data-nav"));
-    var h = slot.getAttribute("data-height");
-    if (h) f.height = h; else f.style.height = "100%";
-    slot.appendChild(f);
-  }
-  document.getElementById("resetWrap").style.display = (CONFIG.calendarId || !id) ? "none" : "";
-}
-
-function setupSegment() {
-  var seg = document.getElementById("seg"), big = document.getElementById("bigCal");
-  var saved = store("calMode");
-  if (saved === "MONTH" || saved === "WEEK" || saved === "AGENDA") big.setAttribute("data-mode", saved);
-  function mark() {
-    var m = big.getAttribute("data-mode"), b = seg.querySelectorAll("button");
-    for (var i = 0; i < b.length; i++) b[i].classList.toggle("on", b[i].getAttribute("data-mode") === m);
-  }
-  seg.onclick = function (e) {
-    var t = e.target.closest("button");
-    if (!t) return;
-    big.setAttribute("data-mode", t.getAttribute("data-mode"));
-    store("calMode", t.getAttribute("data-mode"));
-    mark(); buildCalendars();
-  };
-  mark();
-}
-
-/* ---------- ссылки ---------- */
-function setLinks() {
-  document.getElementById("linkDrive").href = "https://drive.google.com/drive/folders/" + CONFIG.driveFolderId;
-  document.getElementById("linkGit").href = "https://github.com/" + CONFIG.githubUser + "/" + CONFIG.githubRepo;
-  var id = getCalendarId();
-  document.getElementById("linkCal").href = id
-    ? "https://calendar.google.com/calendar/r?cid=" + encodeURIComponent(id)
-    : "https://calendar.google.com/calendar/r";
-}
-
-/* ---------- файлы ---------- */
-function loadDrive() {
-  document.getElementById("driveFrame").src =
-    "https://drive.google.com/embeddedfolderview?id=" + CONFIG.driveFolderId + "#list";
-}
-
-/* ---------- журнал изменений ---------- */
 function plural(n, f) {
-  var a = Math.abs(n) % 100, b = a % 10;
+  const a = Math.abs(n) % 100, b = a % 10;
   if (a > 10 && a < 20) return f[2];
   if (b > 1 && b < 5) return f[1];
   if (b === 1) return f[0];
   return f[2];
 }
 function ago(date) {
-  var s = (Date.now() - date.getTime()) / 1000;
+  const s = (Date.now() - date.getTime()) / 1000;
   if (s < 60) return "только что";
-  var m = Math.floor(s / 60);
+  const m = Math.floor(s / 60);
   if (m < 60) return m + " " + plural(m, ["минуту", "минуты", "минут"]) + " назад";
-  var h = Math.floor(m / 60);
+  const h = Math.floor(m / 60);
   if (h < 24) return h + " " + plural(h, ["час", "часа", "часов"]) + " назад";
-  var d = Math.floor(h / 24);
+  const d = Math.floor(h / 24);
   return d + " " + plural(d, ["день", "дня", "дней"]) + " назад";
 }
 
+/* ---------- хранилище ---------- */
+function ls(k, v) {
+  try {
+    if (v === undefined) return localStorage.getItem(k);
+    if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v);
+  } catch (e) {}
+  return null;
+}
+function store(k, v) { return ls(PREFIX + k, v); }
+
+// У всех панелей общий адрес сайта, поэтому у каждой свои ключи. Старые ключи переносим, чтобы заметки не потерялись.
+(function migrate() {
+  ["notes", "tab", "calMode"].forEach(function (k) {
+    if (ls(PREFIX + k) === null && ls(k) !== null) { ls(PREFIX + k, ls(k)); ls(k, null); }
+  });
+  ls("calendarId", null);
+})();
+
+let toastTimer;
+function toast(text) {
+  const t = $("toast");
+  t.textContent = text; t.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function () { t.classList.remove("show"); }, 2600);
+}
+
+/* ---------- приветствие и дата ---------- */
+(function () {
+  const hr = new Date().getHours();
+  $("hello").textContent = hr < 5 ? "Доброй ночи" : hr < 12 ? "Доброе утро" : hr < 18 ? "Добрый день" : "Добрый вечер";
+  $("today").textContent = cap(fmt(new Date(), { weekday: "long", day: "numeric", month: "long" }));
+})();
+
+/* =====================================================================
+   ВХОД В GOOGLE
+   ===================================================================== */
+// Client ID и токен общие для всех панелей (один адрес сайта), поэтому без префикса
+function getClientId() { return CONFIG.clientId || ls("g_client_id") || ""; }
+function getToken() {
+  const t = ls("g_token"), exp = +ls("g_token_exp") || 0;
+  return t && exp > Date.now() + 30000 ? t : "";
+}
+let expiryTimer;
+function setToken(token, seconds) {
+  const exp = Date.now() + (seconds || 3600) * 1000;
+  ls("g_token", token); ls("g_token_exp", String(exp)); ls("g_connected", "1");
+  clearTimeout(expiryTimer);
+  expiryTimer = setTimeout(authLost, Math.max(1000, exp - Date.now() - 30000));
+}
+function clearToken() { ls("g_token", null); ls("g_token_exp", null); }
+function authLost() { clearToken(); renderAll(); }
+
+let gisPromise = null, tokenClient = null;
+function loadGIS() {
+  if (gisPromise) return gisPromise;
+  gisPromise = new Promise(function (res, rej) {
+    if (window.google && google.accounts && google.accounts.oauth2) return res();
+    const s = document.createElement("script");
+    s.src = "https://accounts.google.com/gsi/client"; s.async = true;
+    s.onload = function () { res(); };
+    s.onerror = function () { gisPromise = null; rej(new Error("gis")); };
+    document.head.appendChild(s);
+  });
+  return gisPromise;
+}
+function onToken(resp) {
+  if (!resp || resp.error) { toast("Вход не удался" + (resp && resp.error ? ": " + resp.error : "")); return; }
+  const o = google.accounts.oauth2;
+  if (o.hasGrantedAllScopes && !o.hasGrantedAllScopes.apply(o, [resp].concat(SCOPE_LIST))) {
+    toast("Нужно разрешить и календарь, и Диск");
+    try { o.revoke(resp.access_token, function () {}); } catch (e) {}
+    return;
+  }
+  setToken(resp.access_token, resp.expires_in);
+  toast("Google подключён");
+  renderAll(); loadUpcoming(); syncNotes();
+}
+function signIn() {
+  if (!getClientId()) { openSheet("connect"); return; }
+  loadGIS().then(function () {
+    if (!tokenClient) {
+      tokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: getClientId(), scope: SCOPES, callback: onToken,
+        error_callback: function (err) { if (err && err.type !== "popup_closed") toast("Не удалось открыть окно входа"); }
+      });
+    }
+    tokenClient.requestAccessToken({ prompt: "" });
+  }).catch(function () { toast("Не удалось загрузить вход Google. Проверьте интернет."); });
+}
+function signOut() {
+  const t = ls("g_token");
+  try { if (t && window.google && google.accounts) google.accounts.oauth2.revoke(t, function () {}); } catch (e) {}
+  clearToken(); ls("g_connected", null);
+  evCache = {}; upcoming = null; store("upcoming", null);
+  toast("Вы вышли из Google");
+  renderAll();
+}
+function connectAction() { if (!getClientId()) openSheet("connect"); else signIn(); }
+
+// запрос к API Google с токеном
+async function gfetch(url, opts) {
+  const token = getToken();
+  if (!token) throw { code: "auth", message: "Нужно войти в Google" };
+  opts = opts || {};
+  const headers = Object.assign({}, opts.headers || {}, { Authorization: "Bearer " + token });
+  let r;
+  try { r = await fetch(url, Object.assign({}, opts, { headers: headers })); }
+  catch (e) { throw { code: "net", message: "нет связи" }; }
+  if (r.status === 401) { clearToken(); renderAll(); throw { code: "auth", message: "Сессия Google закончилась" }; }
+  if (!r.ok) {
+    let msg = "ошибка " + r.status;
+    try { const j = await r.json(); if (j.error && j.error.message) msg = j.error.message; } catch (e) {}
+    throw { code: "http", status: r.status, message: msg };
+  }
+  return r;
+}
+
+function authPrompt(compact) {
+  const has = !!getClientId(), was = ls("g_connected") === "1";
+  const c = el("div", "auth" + (compact ? " compact" : " card"));
+  c.appendChild(el("p", "",
+    !has ? "Подключите Google, чтобы календарь и заметки синхронизировались с вашим аккаунтом."
+    : was ? "Сессия Google закончилась. Войдите снова, чтобы продолжить синхронизацию."
+    : "Войдите в Google, чтобы видеть календарь и синхронизировать заметки с Диском."));
+  const b = el("button", "btn", has ? "Войти в Google" : "Подключить Google");
+  b.onclick = connectAction;
+  c.appendChild(b);
+  return c;
+}
+
+function renderConnect() {
+  const body = $("connectBody");
+  body.innerHTML = "";
+  const has = !!getClientId(), signed = !!getToken();
+  function clientForm() {
+    body.appendChild(el("p", "muted", "Вставьте Client ID из Google Cloud. Он создаётся один раз, это не пароль."));
+    const input = el("input", "field"); input.type = "text"; input.placeholder = "…apps.googleusercontent.com";
+    input.autocapitalize = "off"; input.autocomplete = "off"; input.spellcheck = false;
+    const b = el("button", "btn", "Сохранить");
+    b.onclick = function () {
+      const v = input.value.trim();
+      if (!/^[\w.-]+\.apps\.googleusercontent\.com$/.test(v)) { toast("Это не похоже на Client ID"); return; }
+      ls("g_client_id", v); tokenClient = null; gisPromise = null;
+      loadGIS().catch(function () {});
+      toast("Сохранено"); renderConnect(); renderAll();
+    };
+    body.appendChild(input); body.appendChild(b);
+  }
+  if (!has) { clientForm(); return; }
+  body.appendChild(el("p", "muted", signed ? "Google подключён. Календарь и заметки синхронизируются." : "Client ID сохранён. Теперь войдите в Google."));
+  const main = el("button", "btn", signed ? "Выйти из Google" : "Войти в Google");
+  main.onclick = function () { closeSheets(); if (signed) signOut(); else signIn(); };
+  body.appendChild(main);
+  if (!CONFIG.clientId) {
+    const change = el("button", "text-btn", "Изменить Client ID");
+    change.style.marginTop = "12px";
+    change.onclick = function () { body.innerHTML = ""; clientForm(); };
+    body.appendChild(change);
+  }
+}
+
+/* =====================================================================
+   КАЛЕНДАРЬ: данные
+   ===================================================================== */
+const calBase = () => "https://www.googleapis.com/calendar/v3/calendars/" + encodeURIComponent(CONFIG.calendarId) + "/events";
+let evCache = {};
+
+function normEvent(it) {
+  const allDay = !!(it.start && it.start.date);
+  return {
+    id: it.id, title: it.summary || "", allDay: allDay,
+    start: allDay ? parseYmd(it.start.date) : new Date(it.start.dateTime),
+    end: allDay ? parseYmd(it.end.date) : new Date(it.end.dateTime),
+    location: it.location || "", description: it.description || "", recurring: !!it.recurringEventId
+  };
+}
+const evKey = (from, to) => from.getTime() + "-" + to.getTime();
+async function fetchEvents(from, to) {
+  const key = evKey(from, to);
+  if (evCache[key]) return evCache[key];
+  const out = [];
+  let page = null, n = 0;
+  do {
+    const q = new URLSearchParams({ timeMin: from.toISOString(), timeMax: to.toISOString(), singleEvents: "true", orderBy: "startTime", maxResults: "250" });
+    if (page) q.set("pageToken", page);
+    const j = await (await gfetch(calBase() + "?" + q)).json();
+    (j.items || []).forEach(function (it) { if (it.status !== "cancelled" && it.start && it.end) out.push(normEvent(it)); });
+    page = j.nextPageToken; n++;
+  } while (page && n < 4);
+  evCache[key] = out;
+  return out;
+}
+// раскладывает события по дням (в пределах [from, to))
+function bucket(events, from, to) {
+  const m = new Map();
+  events.forEach(function (ev) {
+    let d = sod(ev.start);
+    const lastDay = ev.end > ev.start ? sod(new Date(ev.end.getTime() - 1)) : d;
+    for (let i = 0; i < 62 && d <= lastDay; i++) {
+      if (d >= from && d < to) { const k = ymd(d); if (!m.has(k)) m.set(k, []); m.get(k).push(ev); }
+      d = addDay(d, 1);
+    }
+  });
+  m.forEach(function (list) { list.sort(function (a, b) { return (b.allDay - a.allDay) || (a.start - b.start); }); });
+  return m;
+}
+
+/* =====================================================================
+   КАЛЕНДАРЬ: экран
+   ===================================================================== */
+let calMode = ["AGENDA", "WEEK", "MONTH"].indexOf(store("calMode")) >= 0 ? store("calMode") : "MONTH";
+let cursor = new Date(), selDay = sod(new Date()), agendaDays = 30, calSeq = 0;
+
+function evTimeText(ev, day) {
+  if (ev.allDay) return ["Весь день", ""];
+  const sDay = sod(ev.start).getTime(), eDay = sod(new Date(ev.end.getTime() - 1)).getTime(), d = sod(day).getTime();
+  if (sDay === eDay || ev.end <= ev.start) return [hm(ev.start), ev.end > ev.start ? hm(ev.end) : ""];
+  if (d === sDay) return [hm(ev.start), "→"];
+  if (d === eDay) return ["до", hm(ev.end)];
+  return ["Весь день", ""];
+}
+function evRow(ev, day) {
+  const b = el("button", "evrow"), t = evTimeText(ev, day);
+  const tc = el("div", "evtime"); tc.appendChild(el("div", "a", t[0])); if (t[1]) tc.appendChild(el("div", "b", t[1]));
+  const main = el("div", "evmain"); main.appendChild(el("div", "evt", ev.title || "Без названия"));
+  if (ev.location) main.appendChild(el("div", "evloc", ev.location));
+  b.appendChild(tc); b.appendChild(el("div", "evbar")); b.appendChild(main);
+  b.onclick = function () { openEvent(ev, day); };
+  return b;
+}
+function dayLabel(d) {
+  const t = sod(new Date()), diff = Math.round((sod(d) - t) / 86400000);
+  if (diff === 0) return "Сегодня";
+  if (diff === 1) return "Завтра";
+  return cap(fmt(d, { weekday: "long", day: "numeric", month: "long" }));
+}
+function markSeg() {
+  const b = $("seg").querySelectorAll("button");
+  for (let i = 0; i < b.length; i++) b[i].classList.toggle("on", b[i].getAttribute("data-mode") === calMode);
+}
+const mondayOf = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate() - ((d.getDay() + 6) % 7));
+function calTitle() {
+  if (calMode === "MONTH") return cap(fmt(cursor, { month: "long" })) + " " + cursor.getFullYear();
+  const m = mondayOf(cursor), s = addDay(m, 6), f = (d) => fmt(d, { day: "numeric", month: "short" }).replace(/\./g, "");
+  return m.getMonth() === s.getMonth() ? m.getDate() + " – " + f(s) : f(m) + " – " + f(s);
+}
+function shift(n) {
+  if (calMode === "MONTH") {
+    cursor = new Date(cursor.getFullYear(), cursor.getMonth() + n, 1);
+    const t = new Date();
+    selDay = (t.getFullYear() === cursor.getFullYear() && t.getMonth() === cursor.getMonth()) ? sod(t) : new Date(cursor);
+  } else cursor = addDay(cursor, 7 * n);
+  renderCalendar();
+}
+function buildNav() {
+  const nav = $("calNav");
+  nav.innerHTML = "";
+  if (calMode === "AGENDA") return;
+  const prev = el("button", "icon-btn"), next = el("button", "icon-btn");
+  prev.setAttribute("aria-label", "Назад"); next.setAttribute("aria-label", "Вперёд");
+  prev.innerHTML = '<svg class="i" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>';
+  next.innerHTML = '<svg class="i" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>';
+  prev.onclick = function () { shift(-1); }; next.onclick = function () { shift(1); };
+  const today = el("button", "text-btn", "Сегодня");
+  today.onclick = function () { cursor = new Date(); selDay = sod(new Date()); renderCalendar(); };
+  nav.appendChild(el("div", "navtitle", calTitle()));
+  nav.appendChild(today); nav.appendChild(prev); nav.appendChild(next);
+}
+
+function drawMonth(body, map) {
+  body.innerHTML = "";
+  const first = new Date(cursor.getFullYear(), cursor.getMonth(), 1), off = (first.getDay() + 6) % 7;
+  const dim = new Date(first.getFullYear(), first.getMonth() + 1, 0).getDate(), weeks = Math.ceil((off + dim) / 7);
+  const start = new Date(first.getFullYear(), first.getMonth(), 1 - off), today = sod(new Date());
+  const card = el("div", "card mgrid-card"), g = el("div", "mgrid");
+  ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"].forEach(function (n) { g.appendChild(el("div", "mh", n)); });
+  for (let i = 0; i < weeks * 7; i++) {
+    const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
+    const c = el("button", "mc" + (d.getMonth() !== first.getMonth() ? " other" : "") + (d.getTime() === today.getTime() ? " today" : "") + (d.getTime() === selDay.getTime() ? " sel" : ""));
+    c.setAttribute("data-date", ymd(d));
+    c.appendChild(el("span", "n", String(d.getDate())));
+    const dots = el("span", "dots"), list = map ? map.get(ymd(d)) : null;
+    if (list) for (let k = 0; k < Math.min(3, list.length); k++) dots.appendChild(el("i"));
+    c.appendChild(dots);
+    c.onclick = function () {
+      selDay = d;
+      if (d.getMonth() !== first.getMonth()) cursor = new Date(d.getFullYear(), d.getMonth(), 1);
+      renderCalendar();
+    };
+    g.appendChild(c);
+  }
+  card.appendChild(g); body.appendChild(card);
+
+  const panel = el("div", "card"), head = el("div", "card-head");
+  head.appendChild(el("span", "label", cap(fmt(selDay, { weekday: "long", day: "numeric", month: "long" }))));
+  const add = el("button", "text-btn", "+ Событие"); add.onclick = function () { openEvent(null, selDay); };
+  head.appendChild(add); panel.appendChild(head);
+  if (!map) panel.appendChild(el("div", "muted", "Загрузка…"));
+  else {
+    const list = map.get(ymd(selDay)) || [];
+    if (!list.length) panel.appendChild(el("div", "muted", "Нет событий"));
+    list.forEach(function (ev) { panel.appendChild(evRow(ev, selDay)); });
+  }
+  body.appendChild(panel);
+}
+function drawWeek(body, map, monday) {
+  body.innerHTML = "";
+  const card = el("div", "card"), today = sod(new Date()).getTime();
+  for (let i = 0; i < 7; i++) {
+    const d = addDay(monday, i), sec = el("div", "wday" + (d.getTime() === today ? " today" : "")), head = el("div", "wh");
+    head.appendChild(el("span", "d", cap(fmt(d, { weekday: "short" })) + ", " + d.getDate()));
+    const add = el("button", "text-btn", "+"); add.setAttribute("aria-label", "Добавить событие");
+    add.onclick = function () { openEvent(null, d); };
+    head.appendChild(add); sec.appendChild(head);
+    if (!map) { if (i === 0) sec.appendChild(el("div", "none", "Загрузка…")); }
+    else {
+      const list = map.get(ymd(d)) || [];
+      if (!list.length) sec.appendChild(el("div", "none", "Нет событий"));
+      list.forEach(function (ev) { sec.appendChild(evRow(ev, d)); });
+    }
+    card.appendChild(sec);
+  }
+  body.appendChild(card);
+}
+function drawAgenda(body, map, from) {
+  body.innerHTML = "";
+  if (!map) { const c = el("div", "card"); c.appendChild(el("div", "muted", "Загрузка…")); body.appendChild(c); return; }
+  const keys = Array.from(map.keys()).sort();
+  if (!keys.length) {
+    const c = el("div", "card"); c.appendChild(el("div", "muted", "В ближайшие " + agendaDays + " дней событий нет.")); body.appendChild(c);
+  }
+  keys.forEach(function (k) {
+    const d = parseYmd(k);
+    const card = el("div", "card");
+    card.appendChild(el("div", "label dgh" + (d.getTime() === sod(new Date()).getTime() ? " today" : ""), dayLabel(d)));
+    map.get(k).forEach(function (ev) { card.appendChild(evRow(ev, d)); });
+    body.appendChild(card);
+  });
+  if (agendaDays < 365) {
+    const more = el("button", "btn ghost more", "Показать ещё 30 дней");
+    more.onclick = function () { agendaDays += 30; renderCalendar(); };
+    body.appendChild(more);
+  }
+}
+function drawCalError(body, e) {
+  body.innerHTML = "";
+  const c = el("div", "card auth");
+  c.appendChild(el("p", "", "Не удалось загрузить календарь: " + (e && e.message ? e.message : "ошибка")));
+  const b = el("button", "btn", "Повторить"); b.onclick = function () { evCache = {}; renderCalendar(); };
+  c.appendChild(b); body.appendChild(c);
+}
+
+async function renderCalendar() {
+  const my = ++calSeq, body = $("calBody"), authBox = $("calAuth");
+  markSeg();
+  authBox.innerHTML = "";
+  if (!getToken()) {
+    authBox.appendChild(authPrompt(false));
+    body.innerHTML = ""; $("calNav").innerHTML = "";
+    return;
+  }
+  buildNav();
+  let from, to, draw;
+  if (calMode === "MONTH") {
+    const first = new Date(cursor.getFullYear(), cursor.getMonth(), 1), off = (first.getDay() + 6) % 7;
+    const dim = new Date(first.getFullYear(), first.getMonth() + 1, 0).getDate(), weeks = Math.ceil((off + dim) / 7);
+    from = new Date(first.getFullYear(), first.getMonth(), 1 - off); to = addDay(from, weeks * 7);
+    draw = function (map) { drawMonth(body, map); };
+  } else if (calMode === "WEEK") {
+    from = mondayOf(cursor); to = addDay(from, 7);
+    draw = function (map) { drawWeek(body, map, from); };
+  } else {
+    from = sod(new Date()); to = addDay(from, agendaDays);
+    draw = function (map) { drawAgenda(body, map, from); };
+  }
+  const cached = evCache[evKey(from, to)];
+  if (cached) { draw(bucket(cached, from, to)); return; }
+  draw(null);
+  try {
+    const evs = await fetchEvents(from, to);
+    if (my !== calSeq) return;
+    draw(bucket(evs, from, to));
+  } catch (e) {
+    if (my !== calSeq) return;
+    if (e.code === "auth") return;
+    drawCalError(body, e);
+  }
+}
+
+/* =====================================================================
+   КАЛЕНДАРЬ: редактор события
+   ===================================================================== */
+let editingEv = null, evDur = 3600000, evDelArmed = false, evDelTimer = null, evBusy = false;
+
+function readDT(p) {
+  const d = $(p + "Date").value, t = $(p + "Time").value || "00:00";
+  if (!d) return null;
+  const a = d.split("-").map(Number), b = t.split(":").map(Number);
+  return new Date(a[0], a[1] - 1, a[2], b[0], b[1]);
+}
+function writeDT(p, d) { $(p + "Date").value = ymd(d); $(p + "Time").value = hm(d); }
+function resetEvDel() {
+  evDelArmed = false; clearTimeout(evDelTimer);
+  $("evDel").classList.remove("armed"); $("evDelText").textContent = "Удалить";
+}
+function openEvent(ev, day) {
+  if (!getToken()) { connectAction(); return; }
+  editingEv = ev || null;
+  const base = sod(day || selDay);
+  let s, e, allDay = false;
+  if (ev) {
+    s = ev.start; e = ev.end; allDay = ev.allDay;
+    if (allDay) e = addDay(e, -1);                      // в Google конец «весь день» не включается
+    if (e < s) e = s;
+  } else {
+    const now = new Date();
+    s = new Date(base.getFullYear(), base.getMonth(), base.getDate(), sod(now).getTime() === base.getTime() ? Math.min(now.getHours() + 1, 23) : 9, 0);
+    e = new Date(s.getTime() + 3600000);
+  }
+  $("evTitle").value = ev ? ev.title : "";
+  $("evAllDay").checked = allDay;
+  $("evForm").classList.toggle("allday", allDay);
+  writeDT("evStart", s); writeDT("evEnd", e);
+  if (allDay) { $("evStartTime").value = "09:00"; $("evEndTime").value = "10:00"; }
+  evDur = Math.max(0, readDT("evEnd") - readDT("evStart"));
+  $("evLoc").value = ev ? ev.location : "";
+  $("evDesc").value = ev ? ev.description : "";
+  $("evNote").textContent = ev && ev.recurring ? "Повторяющееся событие: изменится только это вхождение." : "";
+  $("evDel").style.visibility = ev ? "visible" : "hidden";
+  resetEvDel();
+  showTab("calendar", true);
+  document.body.classList.add("e-edit");
+  pushEd();
+  window.scrollTo(0, 0);
+  if (!ev) $("evTitle").focus();
+}
+function closeEvent(fromHistory) {
+  if (!document.body.classList.contains("e-edit")) return;
+  document.body.classList.remove("e-edit");
+  editingEv = null; resetEvDel();
+  window.scrollTo(0, 0);
+  if (!fromHistory) popEd();
+}
+async function saveEvent() {
+  if (evBusy) return;
+  if (!getToken()) { toast("Сессия закончилась. Войдите и нажмите «Сохранить» ещё раз."); signIn(); return; }
+  const allDay = $("evAllDay").checked, s = readDT("evStart"), e = readDT("evEnd");
+  if (!s || !e) { toast("Укажите дату"); return; }
+  const body = { summary: $("evTitle").value.trim() || "Без названия", location: $("evLoc").value.trim(), description: $("evDesc").value };
+  if (allDay) {
+    if (sod(e) < sod(s)) { toast("Конец раньше начала"); return; }
+    body.start = { date: ymd(sod(s)) }; body.end = { date: ymd(addDay(sod(e), 1)) };
+    if (editingEv) { body.start.dateTime = null; body.end.dateTime = null; }
+  } else {
+    if (e <= s) { toast("Конец должен быть позже начала"); return; }
+    body.start = { dateTime: rfc(s) }; body.end = { dateTime: rfc(e) };
+    if (editingEv) { body.start.date = null; body.end.date = null; }
+  }
+  evBusy = true; $("evSave").disabled = true;
+  try {
+    await gfetch(editingEv ? calBase() + "/" + encodeURIComponent(editingEv.id) : calBase(), {
+      method: editingEv ? "PATCH" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body)
+    });
+    selDay = sod(s); cursor = new Date(s);
+    afterEventChange("Сохранено");
+  } catch (err) { toast("Не сохранилось: " + err.message); }
+  finally { evBusy = false; $("evSave").disabled = false; }
+}
+async function deleteEvent() {
+  if (!editingEv || evBusy) return;
+  if (!evDelArmed) {
+    evDelArmed = true; $("evDel").classList.add("armed"); $("evDelText").textContent = "Точно удалить?";
+    evDelTimer = setTimeout(resetEvDel, 3000);
+    return;
+  }
+  evBusy = true;
+  try {
+    try { await gfetch(calBase() + "/" + encodeURIComponent(editingEv.id), { method: "DELETE" }); }
+    catch (err) { if (!(err.code === "http" && err.status === 410)) throw err; }
+    afterEventChange("Событие удалено");
+  } catch (err) { toast("Не удалилось: " + err.message); }
+  finally { evBusy = false; }
+}
+function afterEventChange(msg) {
+  evCache = {};
+  closeEvent();
+  toast(msg);
+  renderCalendar();
+  loadUpcoming();
+}
+function setupEventEditor() {
+  $("newEvent").onclick = function () { openEvent(null, selDay); };
+  $("evBack").onclick = function () { closeEvent(); };
+  $("evDel").onclick = deleteEvent;
+  $("evSave").onclick = saveEvent;
+  $("evAllDay").onchange = function () { $("evForm").classList.toggle("allday", this.checked); };
+  function startChanged() { const s = readDT("evStart"); if (s) writeDT("evEnd", new Date(s.getTime() + evDur)); }
+  function endChanged() { const s = readDT("evStart"), e = readDT("evEnd"); if (s && e) evDur = Math.max(0, e - s); }
+  $("evStartDate").onchange = startChanged; $("evStartTime").onchange = startChanged;
+  $("evEndDate").onchange = endChanged; $("evEndTime").onchange = endChanged;
+  $("seg").onclick = function (e) {
+    const t = e.target.closest("button");
+    if (!t) return;
+    calMode = t.getAttribute("data-mode"); store("calMode", calMode);
+    renderCalendar();
+  };
+}
+
+/* =====================================================================
+   ОБЗОР: ближайшие события и показатели
+   ===================================================================== */
+const ser = (e) => ({ id: e.id, title: e.title, allDay: e.allDay, s: e.start.getTime(), e: e.end.getTime(), loc: e.location, desc: e.description, rec: e.recurring });
+const deser = (o) => ({ id: o.id, title: o.title, allDay: o.allDay, start: new Date(o.s), end: new Date(o.e), location: o.loc, description: o.desc, recurring: o.rec });
+let upcoming = null;
+try { const j = JSON.parse(store("upcoming") || "null"); if (j && j.events) upcoming = { ts: j.ts, events: j.events.map(deser) }; } catch (e) {}
+
+async function loadUpcoming() {
+  if (!getToken()) { renderUpcoming(); return; }
+  try {
+    const from = sod(new Date()), evs = await fetchEvents(from, addDay(from, 30));
+    upcoming = { ts: Date.now(), events: evs };
+    store("upcoming", JSON.stringify({ ts: upcoming.ts, events: evs.map(ser) }));
+  } catch (e) { /* остаётся прошлая копия */ }
+  renderUpcoming();
+}
+function renderUpcoming() {
+  const box = $("upcoming"), signed = !!getToken();
+  box.innerHTML = "";
+  if (!upcoming) {
+    if (!signed) box.appendChild(authPrompt(true)); else box.appendChild(el("div", "muted", "Загрузка…"));
+    updateStats(); return;
+  }
+  const now = Date.now(), t0 = sod(new Date());
+  const list = upcoming.events.filter(function (e) { return e.end.getTime() > now; }).sort(function (a, b) { return a.start - b.start; }).slice(0, 5);
+  if (!list.length) box.appendChild(el("div", "muted", "В ближайшие 30 дней событий нет."));
+  list.forEach(function (ev) {
+    const b = el("button", "ovrow"), day = ev.start < t0 ? t0 : sod(ev.start), diff = Math.round((day - t0) / 86400000);
+    b.appendChild(el("div", "ovd", diff === 0 ? "Сегодня" : diff === 1 ? "Завтра" : fmt(day, { weekday: "short", day: "numeric", month: "short" }).replace(/\./g, "")));
+    const m = el("div", "evmain"); m.appendChild(el("div", "evt", ev.title || "Без названия"));
+    m.appendChild(el("div", "evloc", ev.allDay ? "Весь день" : hm(ev.start) + "–" + hm(ev.end)));
+    b.appendChild(m);
+    b.onclick = function () { openEvent(ev, day); };
+    box.appendChild(b);
+  });
+  if (!signed) {
+    const n = el("div", "muted small", "Данные на " + fmtDate(upcoming.ts) + ". ");
+    const b = el("button", "text-btn", getClientId() ? "Войти" : "Подключить"); b.onclick = connectAction;
+    n.appendChild(b); box.appendChild(n);
+  }
+  updateStats();
+}
+function updateStats() {
+  const t0 = sod(new Date());
+  $("statToday").textContent = upcoming ? String((bucket(upcoming.events, t0, addDay(t0, 1)).get(ymd(t0)) || []).length) : "—";
+  $("statNotes").textContent = String(notes.filter(function (n) { return n.text.trim(); }).length);
+}
+
+/* ---------- файлы и журнал ---------- */
+function setLinks() {
+  $("linkDrive").href = "https://drive.google.com/drive/folders/" + CONFIG.driveFolderId;
+  $("linkGit").href = "https://github.com/" + CONFIG.githubUser + "/" + CONFIG.githubRepo;
+  $("linkCal").href = "https://calendar.google.com/calendar/r";
+}
+function loadDrive() { $("driveFrame").src = "https://drive.google.com/embeddedfolderview?id=" + CONFIG.driveFolderId + "#list"; }
 function loadCommits() {
-  var log = document.getElementById("log");
-  var url = "https://api.github.com/repos/" + CONFIG.githubUser + "/" + CONFIG.githubRepo + "/commits?per_page=30";
-  fetch(url)
-    .then(function (r) {
-      if (r.status === 409) return [];
-      if (!r.ok) throw new Error("HTTP " + r.status);
-      return r.json();
-    })
+  const log = $("log");
+  fetch("https://api.github.com/repos/" + CONFIG.githubUser + "/" + CONFIG.githubRepo + "/commits?per_page=5")
+    .then(function (r) { if (r.status === 409) return []; if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
     .then(function (list) {
       if (!list.length) { log.innerHTML = '<li class="muted">Пока нет изменений.</li>'; return; }
-      var monthAgo = Date.now() - 30 * 86400000, n = 0;
-      list.forEach(function (c) { if (new Date(c.commit.author.date).getTime() > monthAgo) n++; });
-      document.getElementById("tileLast").textContent = ago(new Date(list[0].commit.author.date));
-      document.getElementById("tileCount").textContent = n;
       log.innerHTML = "";
-      list.slice(0, 5).forEach(function (c) {
-        var li = document.createElement("li");
-        li.textContent = (c.commit.message || "").split("\n")[0];
-        var s = document.createElement("small");
-        s.textContent = ago(new Date(c.commit.author.date));
-        li.appendChild(s);
+      list.forEach(function (c) {
+        const li = el("li", "", (c.commit.message || "").split("\n")[0]);
+        li.appendChild(el("small", "", ago(new Date(c.commit.author.date))));
         log.appendChild(li);
       });
     })
     .catch(function () { log.innerHTML = '<li class="muted">Не удалось загрузить журнал.</li>'; });
 }
 
-/* ---------- заметки ---------- */
-var notes = [], currentId = null, saveTimer = null, saveWarned = false, delTimer = null, delArmed = false;
+/* =====================================================================
+   ЗАМЕТКИ
+   ===================================================================== */
+let notes = [], deleted = [], currentId = null, saveTimer = null, syncTimer = null, saveWarned = false, delTimer = null, delArmed = false;
 
 function loadNotes() {
-  try {
-    var raw = store("notes");
-    notes = raw ? JSON.parse(raw) : [];
-    if (!Array.isArray(notes)) notes = [];
-  } catch (e) { notes = []; }
+  try { const r = store("notes"); notes = r ? JSON.parse(r) : []; if (!Array.isArray(notes)) notes = []; } catch (e) { notes = []; }
+  try { const r = store("notes_del"); deleted = r ? JSON.parse(r) : []; if (!Array.isArray(deleted)) deleted = []; } catch (e) { deleted = []; }
 }
 function saveNotes() {
-  try {
-    localStorage.setItem("notes", JSON.stringify(notes));
-  } catch (e) {
-    if (!saveWarned) { saveWarned = true; toast("Не удалось сохранить заметки в браузере"); }
-  }
+  try { localStorage.setItem(PREFIX + "notes", JSON.stringify(notes)); localStorage.setItem(PREFIX + "notes_del", JSON.stringify(deleted)); }
+  catch (e) { if (!saveWarned) { saveWarned = true; toast("Не удалось сохранить заметки в браузере"); } }
 }
-function flushSave() { clearTimeout(saveTimer); saveTimer = null; if (currentId) saveNotes(); }
-function noteById(id) { for (var i = 0; i < notes.length; i++) if (notes[i].id === id) return notes[i]; return null; }
-function sortedNotes() { return notes.slice().sort(function (a, b) { return b.updated - a.updated; }); }
-
+const noteById = (id) => notes.find(function (n) { return n.id === id; }) || null;
+const sortedNotes = () => notes.slice().sort(function (a, b) { return b.updated - a.updated; });
 function noteTitle(t) {
-  var lines = t.split("\n");
-  for (var i = 0; i < lines.length; i++) if (lines[i].trim()) return lines[i].trim();
+  const lines = t.split("\n");
+  for (let i = 0; i < lines.length; i++) if (lines[i].trim()) return lines[i].trim();
   return "Без названия";
 }
 function noteBody(t) {
-  var lines = t.split("\n"), seen = false, out = [];
-  for (var i = 0; i < lines.length; i++) {
-    if (!seen) { if (lines[i].trim()) seen = true; continue; }
-    out.push(lines[i]);
-  }
+  const lines = t.split("\n"); let seen = false; const out = [];
+  for (let i = 0; i < lines.length; i++) { if (!seen) { if (lines[i].trim()) seen = true; continue; } out.push(lines[i]); }
   return out.join(" ").replace(/\s+/g, " ").trim();
 }
-function fmtDate(ts) {
-  var d = new Date(ts), n = new Date();
-  if (d.toDateString() === n.toDateString()) return d.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
-  return d.toLocaleDateString("ru-RU", { day: "numeric", month: "short" });
+function removeNote(n) {
+  notes.splice(notes.indexOf(n), 1);
+  deleted = deleted.filter(function (d) { return d.id !== n.id; });
+  deleted.push({ id: n.id, ts: Date.now() });
 }
-function txt(tag, cls, text) { var e = document.createElement(tag); e.className = cls; e.textContent = text; return e; }
 
 function renderNotes() {
-  var list = document.getElementById("noteList"), recent = document.getElementById("recentNotes");
-  var all = sortedNotes();
+  const list = $("noteList"), recent = $("recentNotes"), all = sortedNotes().filter(function (n) { return n.text.trim() || n.id === currentId; });
   list.innerHTML = ""; recent.innerHTML = "";
-
+  updateStats();
   if (!all.length) {
-    list.appendChild(txt("div", "empty", "Заметок пока нет. Нажмите «Новая»."));
-    var e = txt("div", "muted", "Пока пусто. ");
-    var b = txt("button", "text-btn", "Создать заметку");
-    b.onclick = newNote; e.appendChild(b);
-    recent.appendChild(e);
+    list.appendChild(el("div", "empty", "Заметок пока нет. Нажмите «Новая»."));
+    const e = el("div", "muted", "Пока пусто. "), b = el("button", "text-btn", "Создать заметку");
+    b.onclick = newNote; e.appendChild(b); recent.appendChild(e);
     return;
   }
   all.forEach(function (n) {
-    var b = document.createElement("button");
-    b.className = "note-item";
-    b.appendChild(txt("div", "t", noteTitle(n.text)));
-    var p = noteBody(n.text);
-    if (p) b.appendChild(txt("div", "p", p));
-    b.appendChild(txt("div", "d", fmtDate(n.updated)));
+    const b = el("button", "note-item");
+    b.appendChild(el("div", "t", noteTitle(n.text)));
+    const p = noteBody(n.text); if (p) b.appendChild(el("div", "p", p));
+    b.appendChild(el("div", "d", fmtDate(n.updated)));
     b.onclick = function () { openNote(n.id); };
     list.appendChild(b);
   });
   all.slice(0, 3).forEach(function (n) {
-    var b = document.createElement("button");
-    b.className = "note-item compact";
-    b.appendChild(txt("div", "t", noteTitle(n.text)));
-    b.appendChild(txt("div", "d", fmtDate(n.updated)));
-    b.onclick = function () { showTab("notes"); openNote(n.id); };
+    const b = el("button", "note-item compact");
+    b.appendChild(el("div", "t", noteTitle(n.text))); b.appendChild(el("div", "d", fmtDate(n.updated)));
+    b.onclick = function () { openNote(n.id); };
     recent.appendChild(b);
   });
 }
-
 function resetDeleteButton() {
   delArmed = false; clearTimeout(delTimer);
-  var b = document.getElementById("edDel");
-  b.classList.remove("armed");
-  document.getElementById("edDelText").textContent = "Удалить";
+  $("edDel").classList.remove("armed"); $("edDelText").textContent = "Удалить";
 }
 function openNote(id) {
-  var n = noteById(id);
+  const n = noteById(id);
   if (!n) return;
-  currentId = id;
-  resetDeleteButton();
-  document.body.classList.add("editing");
-  var ta = document.getElementById("noteText");
-  ta.value = n.text;
+  showTab("notes", true);
+  currentId = id; resetDeleteButton();
+  document.body.classList.add("n-edit");
+  pushEd();
+  $("noteText").value = n.text;
   window.scrollTo(0, 0);
-  if (!n.text) ta.focus();
+  if (!n.text) $("noteText").focus();
 }
-function closeNote() {
+function closeNote(fromHistory) {
   if (!currentId) return;
   clearTimeout(saveTimer);
-  var n = noteById(currentId);
-  if (n && !n.text.trim()) notes.splice(notes.indexOf(n), 1);
+  const n = noteById(currentId);
+  if (n && !n.text.trim()) removeNote(n);
   saveNotes();
-  currentId = null;
-  resetDeleteButton();
-  document.body.classList.remove("editing");
-  renderNotes();
-  window.scrollTo(0, 0);
+  currentId = null; resetDeleteButton();
+  document.body.classList.remove("n-edit");
+  renderNotes(); window.scrollTo(0, 0);
+  if (!fromHistory) popEd();
+  scheduleSync(300);
 }
 function newNote() {
-  var n = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), text: "", updated: Date.now() };
+  const n = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), text: "", updated: Date.now() };
   notes.push(n);
-  showTab("notes");
   openNote(n.id);
 }
 function deleteNote() {
   if (!delArmed) {
-    delArmed = true;
-    var b = document.getElementById("edDel");
-    b.classList.add("armed");
-    document.getElementById("edDelText").textContent = "Точно удалить?";
+    delArmed = true; $("edDel").classList.add("armed"); $("edDelText").textContent = "Точно удалить?";
     delTimer = setTimeout(resetDeleteButton, 3000);
     return;
   }
-  var n = noteById(currentId);
-  if (n) notes.splice(notes.indexOf(n), 1);
+  const n = noteById(currentId);
+  if (n) removeNote(n);
   saveNotes();
-  currentId = null;
-  resetDeleteButton();
-  document.body.classList.remove("editing");
-  renderNotes();
+  currentId = null; resetDeleteButton();
+  document.body.classList.remove("n-edit");
+  renderNotes(); popEd();
   toast("Заметка удалена");
+  scheduleSync(300);
 }
 function copyText(t) {
   function fallback() {
-    var ta = document.createElement("textarea");
+    const ta = document.createElement("textarea");
     ta.value = t; ta.style.position = "fixed"; ta.style.opacity = "0";
     document.body.appendChild(ta); ta.focus(); ta.select();
-    var ok = false;
-    try { ok = document.execCommand("copy"); } catch (e) {}
+    let ok = false; try { ok = document.execCommand("copy"); } catch (e) {}
     document.body.removeChild(ta);
     toast(ok ? "Скопировано" : "Не удалось скопировать");
   }
-  if (navigator.clipboard && window.isSecureContext) {
-    navigator.clipboard.writeText(t).then(function () { toast("Скопировано"); }, fallback);
-  } else fallback();
+  if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(t).then(function () { toast("Скопировано"); }, fallback);
+  else fallback();
+}
+function notesAsText(list) {
+  return list.map(function (n) {
+    return new Date(n.updated).toLocaleString("ru-RU", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" }) + "\n" + n.text;
+  }).join("\n\n————————————\n\n");
 }
 function copyAllNotes() {
-  var all = sortedNotes().filter(function (n) { return n.text.trim(); });
+  const all = sortedNotes().filter(function (n) { return n.text.trim(); });
   if (!all.length) { toast("Заметок нет"); return; }
-  var parts = all.map(function (n) {
-    return new Date(n.updated).toLocaleString("ru-RU", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" }) + "\n" + n.text;
-  });
-  copyText(parts.join("\n\n————————————\n\n"));
+  copyText(notesAsText(all));
 }
+
+/* ---------- синхронизация с Диском ---------- */
+let syncing = false, syncPending = false, syncState = "idle", syncErr = "";
+
+// Слияние: для каждой заметки побеждает самая свежая версия; удаление тоже считается «версией»
+function mergeNotes(ln, ld, rn, rd) {
+  const best = new Map();
+  function consider(id, kind, ts, note) {
+    const cur = best.get(id);
+    if (!cur || ts > cur.ts || (ts === cur.ts && kind === "del" && cur.kind === "note")) best.set(id, { kind: kind, ts: ts, note: note });
+  }
+  ln.forEach(function (n) { consider(n.id, "note", n.updated, n); });
+  rn.forEach(function (n) { consider(n.id, "note", n.updated, n); });
+  ld.forEach(function (d) { consider(d.id, "del", d.ts); });
+  rd.forEach(function (d) { consider(d.id, "del", d.ts); });
+  const outN = [], outD = [], limit = Date.now() - 90 * 86400000;
+  best.forEach(function (v, id) {
+    if (v.kind === "note") outN.push({ id: id, text: v.note.text, updated: v.note.updated });
+    else if (v.ts > limit) outD.push({ id: id, ts: v.ts });
+  });
+  return { notes: outN, deleted: outD };
+}
+const canon = (n, d) => JSON.stringify({
+  n: n.slice().sort(function (a, b) { return a.id < b.id ? -1 : 1; }).map(function (x) { return [x.id, x.text, x.updated]; }),
+  d: d.slice().sort(function (a, b) { return a.id < b.id ? -1 : 1; }).map(function (x) { return [x.id, x.ts]; })
+});
+
+async function driveFind(name) {
+  const q = "name = '" + name.replace(/\\/g, "\\\\").replace(/'/g, "\\'") + "' and '" + CONFIG.driveFolderId + "' in parents and trashed = false";
+  const r = await gfetch("https://www.googleapis.com/drive/v3/files?" + new URLSearchParams({ q: q, fields: "files(id,name)", pageSize: "5", spaces: "drive" }));
+  const j = await r.json();
+  return j.files && j.files[0] ? j.files[0].id : null;
+}
+async function driveRead(id) { return (await gfetch("https://www.googleapis.com/drive/v3/files/" + id + "?alt=media")).text(); }
+async function driveCreate(name, mime, content) {
+  const b = "b" + Math.random().toString(36).slice(2);
+  const meta = JSON.stringify({ name: name, parents: [CONFIG.driveFolderId], mimeType: mime });
+  const body = "--" + b + "\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n" + meta + "\r\n--" + b + "\r\nContent-Type: " + mime + "; charset=UTF-8\r\n\r\n" + content + "\r\n--" + b + "--";
+  const r = await gfetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id", { method: "POST", headers: { "Content-Type": "multipart/related; boundary=" + b }, body: body });
+  return (await r.json()).id;
+}
+async function driveUpdate(id, mime, content) {
+  await gfetch("https://www.googleapis.com/upload/drive/v3/files/" + id + "?uploadType=media&fields=id", { method: "PATCH", headers: { "Content-Type": mime + "; charset=UTF-8" }, body: content });
+}
+async function putFile(name, idKey, mime, content) {
+  let id = store(idKey);
+  if (id) {
+    try { await driveUpdate(id, mime, content); return; }
+    catch (e) { if (!(e.code === "http" && e.status === 404)) throw e; store(idKey, null); }
+  }
+  id = await driveFind(name);
+  if (id) await driveUpdate(id, mime, content); else id = await driveCreate(name, mime, content);
+  store(idKey, id);
+}
+
+function scheduleSync(ms) {
+  clearTimeout(syncTimer);
+  if (!getToken()) return;
+  syncTimer = setTimeout(function () { syncNotes(); }, ms == null ? 6000 : ms);
+}
+async function syncNotes(manual) {
+  if (!getToken()) { if (manual) connectAction(); updateSyncLine(); return; }
+  if (syncing) { syncPending = true; return; }
+  syncing = true; syncState = "syncing"; updateSyncLine();
+  try {
+    // 1. что лежит на Диске
+    let fileId = store("notes_file_id"), remote = { notes: [], deleted: [] }, text = null;
+    if (fileId) {
+      try { text = await driveRead(fileId); }
+      catch (e) { if (e.code === "http" && e.status === 404) { fileId = null; store("notes_file_id", null); } else throw e; }
+    }
+    if (!fileId) { fileId = await driveFind(CONFIG.notesFile); if (fileId) { store("notes_file_id", fileId); text = await driveRead(fileId); } }
+    if (text !== null) {
+      let j;
+      try { j = JSON.parse(text); } catch (e) { throw { message: "файл синхронизации на Диске повреждён" }; }
+      remote = { notes: Array.isArray(j.notes) ? j.notes : [], deleted: Array.isArray(j.deleted) ? j.deleted : [] };
+    }
+    // 2. слияние (пустые и незавершённые заметки не отправляем)
+    const localNotes = notes.filter(function (n) { return n.text.trim(); });
+    const m = mergeNotes(localNotes, deleted, remote.notes, remote.deleted);
+    // открытую в редакторе заметку не подменяем
+    if (currentId) {
+      const open = noteById(currentId);
+      m.notes = m.notes.filter(function (n) { return n.id !== currentId; });
+      if (open) m.notes.push(open);
+    }
+    notes = m.notes; deleted = m.deleted;
+    saveNotes(); renderNotes();
+    // 3. если на Диске не то же самое — обновляем файл и читаемую копию
+    const sendNotes = notes.filter(function (n) { return n.text.trim(); });
+    if (fileId === null || canon(sendNotes, deleted) !== canon(remote.notes, remote.deleted)) {
+      const json = JSON.stringify({ v: 1, updated: Date.now(), notes: sendNotes, deleted: deleted });
+      await putFile(CONFIG.notesFile, "notes_file_id", "application/json", json);
+      const head = "Заметки: резервная копия от " + new Date().toLocaleString("ru-RU") + "\n\n";
+      await putFile(CONFIG.notesBackup, "notes_txt_id", "text/plain", head + (sendNotes.length ? notesAsText(sendNotes.sort(function (a, b) { return b.updated - a.updated; })) : "(заметок нет)"));
+    }
+    store("notes_sync_ts", String(Date.now()));
+    syncState = "ok";
+  } catch (e) {
+    syncState = e.code === "auth" ? "idle" : "error";
+    syncErr = e.message || "ошибка";
+  } finally {
+    syncing = false; updateSyncLine();
+    if (syncPending) { syncPending = false; syncNotes(); }
+  }
+}
+function updateSyncLine() {
+  const t = $("syncText"), b = $("syncBtn");
+  if (!getToken()) {
+    t.textContent = "Диск не подключён"; b.textContent = getClientId() ? "Войти" : "Подключить"; b.onclick = connectAction; b.disabled = false;
+    return;
+  }
+  b.textContent = "Синхронизировать"; b.onclick = function () { syncNotes(true); }; b.disabled = syncState === "syncing";
+  if (syncState === "syncing") t.textContent = "Синхронизация…";
+  else if (syncState === "error") t.textContent = "Ошибка синхронизации: " + syncErr;
+  else { const ts = +store("notes_sync_ts") || 0; t.textContent = ts ? "Синхронизировано в " + fmtDate(ts) : "Ещё не синхронизировано"; }
+}
+
 function setupNotes() {
   loadNotes();
-  var ta = document.getElementById("noteText");
+  const ta = $("noteText");
   ta.addEventListener("input", function () {
-    var n = noteById(currentId);
+    const n = noteById(currentId);
     if (!n) return;
     n.text = ta.value; n.updated = Date.now();
-    clearTimeout(saveTimer);
-    saveTimer = setTimeout(saveNotes, 250);
+    clearTimeout(saveTimer); saveTimer = setTimeout(saveNotes, 250);
+    scheduleSync(8000);
   });
-  document.getElementById("newNote").onclick = newNote;
-  document.getElementById("edBack").onclick = closeNote;
-  document.getElementById("edDel").onclick = deleteNote;
-  document.getElementById("allNotes").onclick = function () { showTab("notes"); };
-  window.addEventListener("pagehide", flushSave);
-  document.addEventListener("visibilitychange", function () { if (document.hidden) flushSave(); });
+  $("newNote").onclick = newNote;
+  $("edBack").onclick = function () { closeNote(); };
+  $("edDel").onclick = deleteNote;
+  $("allNotes").onclick = function () { showTab("notes"); };
+  $("allEvents").onclick = function () { showTab("calendar"); };
+  window.addEventListener("pagehide", function () { clearTimeout(saveTimer); if (currentId) saveNotes(); });
+  document.addEventListener("visibilitychange", function () { if (document.hidden) { clearTimeout(saveTimer); if (currentId) saveNotes(); } });
   renderNotes();
 }
 
-/* ---------- вкладки ---------- */
-function showTab(name) {
-  if (name !== "notes" && currentId) closeNote();
-  var tabs = document.querySelectorAll(".tab");
-  for (var i = 0; i < tabs.length; i++) tabs[i].classList.toggle("active", tabs[i].id === "tab-" + name);
-  var btns = document.querySelectorAll(".tabbar button");
-  for (var j = 0; j < btns.length; j++) btns[j].classList.toggle("on", btns[j].getAttribute("data-tab") === name);
+/* =====================================================================
+   ВКЛАДКИ, ШТОРКИ, КНОПКА «НАЗАД»
+   ===================================================================== */
+// кнопка «Назад» на телефоне сначала закрывает редактор, а не выходит из приложения
+let edDepth = 0, ignorePop = 0;
+function pushEd() { try { history.pushState({ ed: 1 }, ""); edDepth++; } catch (e) {} }
+function popEd() { if (edDepth > 0) { edDepth--; ignorePop++; history.back(); } }
+window.addEventListener("popstate", function () {
+  if (ignorePop > 0) { ignorePop--; return; }
+  if (edDepth > 0) { edDepth--; closeNote(true); closeEvent(true); }
+});
+
+function showTab(name, keepEditors) {
+  if (!keepEditors) { if (currentId) closeNote(); closeEvent(); }
+  const tabs = document.querySelectorAll(".tab");
+  for (let i = 0; i < tabs.length; i++) tabs[i].classList.toggle("active", tabs[i].id === "tab-" + name);
+  const btns = document.querySelectorAll(".tabbar button");
+  for (let j = 0; j < btns.length; j++) btns[j].classList.toggle("on", btns[j].getAttribute("data-tab") === name);
   store("tab", name);
   window.scrollTo(0, 0);
+  if (name === "calendar") renderCalendar();
 }
 function setupTabs() {
-  var btns = document.querySelectorAll(".tabbar button");
-  for (var i = 0; i < btns.length; i++) {
-    btns[i].onclick = function () { showTab(this.getAttribute("data-tab")); };
-  }
-  var saved = store("tab");
+  const btns = document.querySelectorAll(".tabbar button");
+  for (let i = 0; i < btns.length; i++) btns[i].onclick = function () { showTab(this.getAttribute("data-tab")); };
+  const saved = store("tab");
   if (saved === "calendar" || saved === "overview" || saved === "notes") showTab(saved);
 }
 
-/* ---------- шторка ---------- */
-function setupSheet() {
-  var sheet = document.getElementById("sheet"), back = document.getElementById("backdrop");
-  function open(v) { sheet.classList.toggle("open", v); back.classList.toggle("open", v); }
-  document.getElementById("menuBtn").onclick = function () { open(true); };
-  back.onclick = function () { open(false); };
-  document.addEventListener("keydown", function (e) { if (e.key === "Escape") open(false); });
-  document.getElementById("resetCal").onclick = function () {
-    store("calendarId", null);
-    open(false); buildCalendars(); setLinks();
-  };
-  document.getElementById("copyNotes").onclick = function () { open(false); copyAllNotes(); };
+function closeSheets() {
+  $("sheet").classList.remove("open"); $("connect").classList.remove("open"); $("backdrop").classList.remove("open");
+}
+function openSheet(which) {
+  closeSheets();
+  if (which === "connect") renderConnect();
+  $(which).classList.add("open"); $("backdrop").classList.add("open");
+}
+function setupSheets() {
+  $("menuBtn").onclick = function () { openSheet("sheet"); };
+  $("backdrop").onclick = closeSheets;
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape") closeSheets(); });
+  $("rowAccount").onclick = function () { openSheet("connect"); };
+  $("rowSync").onclick = function () { closeSheets(); syncNotes(true); };
+  $("copyNotes").onclick = function () { closeSheets(); copyAllNotes(); };
 }
 
+/* ---------- общий перерисовщик ---------- */
+function renderAll() {
+  $("accStatus").textContent = getToken() ? "Подключено" : getClientId() ? "Нужно войти" : "Не подключено";
+  renderUpcoming();
+  renderCalendar();
+  updateSyncLine();
+  if ($("connect").classList.contains("open")) renderConnect();
+}
+
+/* ---------- запуск ---------- */
 setupNotes();
+setupEventEditor();
 setupTabs();
-setupSegment();
-setupSheet();
+setupSheets();
 setLinks();
-buildCalendars();
 loadDrive();
 loadCommits();
+if (getClientId()) loadGIS().catch(function () {});
+if (getToken()) {
+  setToken(ls("g_token"), (+ls("g_token_exp") - Date.now()) / 1000);
+  loadUpcoming(); syncNotes();
+}
+renderAll();
 </script>
 
 </body>
