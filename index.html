@@ -175,6 +175,17 @@
   .evtime .b { font-weight: 500; font-size: 12px; }
   .evrow:nth-of-type(3n+2) .evtime { background: var(--sand); color: var(--on-sand); }
   .evrow:nth-of-type(3n) .evtime { background: var(--sky); color: var(--on-sky); }
+  .stcirc { flex: none; width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--accent-strong); background: transparent; display: grid; place-items: center; cursor: pointer; margin-left: 2px; }
+  .stcirc.progress { background: linear-gradient(90deg, var(--accent-strong) 50%, transparent 50%); }
+  .stcirc.done { background: var(--accent-strong); }
+  .stcirc.done::after { content: ""; width: 6px; height: 12px; border: solid #fff; border-width: 0 2.5px 2.5px 0; transform: rotate(45deg) translate(-1px, -1px); }
+  .evrow.done { opacity: .6; }
+  .evrow.done .evt { text-decoration: line-through; }
+  .stf { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 0 0 10px; }
+  .stf.three { grid-template-columns: repeat(3, 1fr); margin-bottom: 14px; }
+  .stf button { height: 36px; border: 1.5px solid var(--line); border-radius: 18px; background: var(--surface); color: var(--muted); font-weight: 600; font-size: 13px; cursor: pointer; padding: 0 2px; }
+  .stf button.on { background: var(--accent-strong); border-color: var(--accent-strong); color: #fff; font-weight: 800; }
+  .form > .label { display: block; margin-bottom: 6px; }
   .evbar { display: none; }
   .evmain { min-width: 0; flex: 1; }
   .evt { font-weight: 700; font-size: 16px; overflow-wrap: anywhere; }
@@ -349,6 +360,12 @@
         <button data-mode="WEEK">Неделя</button>
         <button data-mode="MONTH">Месяц</button>
       </div>
+      <div class="stf" id="stFilter">
+        <button data-st="all">Все</button>
+        <button data-st="plan">В планах</button>
+        <button data-st="progress">В процессе</button>
+        <button data-st="done">Выполнено</button>
+      </div>
       <div id="calAuth"></div>
       <div class="nav" id="calNav"></div>
       <div id="calBody"></div>
@@ -364,6 +381,23 @@
         <label class="swrow"><span>Весь день</span><input type="checkbox" id="evAllDay"></label>
         <div class="dt"><span class="label">Начало</span><input class="field" type="date" id="evStartDate"><input class="field" type="time" id="evStartTime"></div>
         <div class="dt"><span class="label">Конец</span><input class="field" type="date" id="evEndDate"><input class="field" type="time" id="evEndTime"></div>
+        <span class="label">Статус</span>
+        <div class="stf three" id="evStatus">
+          <button data-st="plan">В планах</button>
+          <button data-st="progress">В процессе</button>
+          <button data-st="done">Выполнено</button>
+        </div>
+        <div id="evRepBox">
+          <span class="label">Повтор</span>
+          <select class="field" id="evRepeat">
+            <option value="">Не повторять</option>
+            <option value="DAILY">Каждый день</option>
+            <option value="WEEKDAYS">По будням</option>
+            <option value="WEEKLY">Каждую неделю</option>
+            <option value="MONTHLY">Каждый месяц</option>
+            <option value="YEARLY">Каждый год</option>
+          </select>
+        </div>
         <input class="field" id="evLoc" type="text" placeholder="Место" autocomplete="off">
         <textarea class="field" id="evDesc" rows="4" placeholder="Описание"></textarea>
         <div class="muted small" id="evNote"></div>
@@ -670,6 +704,11 @@ function renderConnect() {
    ===================================================================== */
 const calBase = () => "https://www.googleapis.com/calendar/v3/calendars/" + encodeURIComponent(CONFIG.calendarId) + "/events";
 let evCache = {};
+const STATUSES = ["plan", "progress", "done"];
+const STATUS_NAME = { plan: "В планах", progress: "В процессе", done: "Выполнено" };
+function normStatus(v) { return STATUSES.indexOf(v) >= 0 ? v : "plan"; }
+let stFilter = ["all"].concat(STATUSES).indexOf(store("stFilter")) >= 0 ? store("stFilter") : "all";
+let evStat = "plan", evBusyStatus = false;
 
 function normEvent(it) {
   const allDay = !!(it.start && it.start.date);
@@ -677,7 +716,8 @@ function normEvent(it) {
     id: it.id, title: it.summary || "", allDay: allDay,
     start: allDay ? parseYmd(it.start.date) : new Date(it.start.dateTime),
     end: allDay ? parseYmd(it.end.date) : new Date(it.end.dateTime),
-    location: it.location || "", description: it.description || "", recurring: !!it.recurringEventId
+    location: it.location || "", description: it.description || "", recurring: !!it.recurringEventId,
+    status: normStatus(it.extendedProperties && it.extendedProperties.private && it.extendedProperties.private.status)
   };
 }
 const evKey = (from, to) => from.getTime() + "-" + to.getTime();
@@ -697,9 +737,10 @@ async function fetchEvents(from, to) {
   return out;
 }
 // раскладывает события по дням (в пределах [from, to))
-function bucket(events, from, to) {
+function bucket(events, from, to, filtered) {
   const m = new Map();
   events.forEach(function (ev) {
+    if (filtered && stFilter !== "all" && ev.status !== stFilter) return;
     let d = sod(ev.start);
     const lastDay = ev.end > ev.start ? sod(new Date(ev.end.getTime() - 1)) : d;
     for (let i = 0; i < 62 && d <= lastDay; i++) {
@@ -726,13 +767,38 @@ function evTimeText(ev, day) {
   return ["Весь день", ""];
 }
 function evRow(ev, day) {
-  const b = el("button", "evrow"), t = evTimeText(ev, day);
+  const b = el("button", "evrow" + (ev.status === "done" ? " done" : "")), t = evTimeText(ev, day);
   const tc = el("div", "evtime"); tc.appendChild(el("div", "a", t[0])); if (t[1]) tc.appendChild(el("div", "b", t[1]));
   const main = el("div", "evmain"); main.appendChild(el("div", "evt", ev.title || "Без названия"));
   if (ev.location) main.appendChild(el("div", "evloc", ev.location));
-  b.appendChild(tc); b.appendChild(main);
+  const circ = el("span", "stcirc " + ev.status);
+  circ.setAttribute("role", "button"); circ.setAttribute("aria-label", "Статус: " + STATUS_NAME[ev.status] + ". Нажмите, чтобы сменить");
+  circ.onclick = function (e) { e.stopPropagation(); cycleStatus(ev); };
+  b.appendChild(tc); b.appendChild(main); b.appendChild(circ);
   b.onclick = function () { openEvent(ev, day); };
   return b;
+}
+async function cycleStatus(ev) {
+  if (evBusyStatus) return;
+  if (!getToken()) { connectAction(); return; }
+  const prev = ev.status, next = STATUSES[(STATUSES.indexOf(prev) + 1) % 3];
+  evBusyStatus = true; ev.status = next; renderCalendar();
+  try {
+    await gfetch(calBase() + "/" + encodeURIComponent(ev.id), {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ extendedProperties: { private: { status: next } } })
+    });
+    toast(STATUS_NAME[next]);
+  } catch (err) { ev.status = prev; renderCalendar(); toast("Не сохранилось: " + err.message); }
+  finally { evBusyStatus = false; }
+}
+function markFilter() {
+  const b = $("stFilter").querySelectorAll("button");
+  for (let i = 0; i < b.length; i++) b[i].classList.toggle("on", b[i].getAttribute("data-st") === stFilter);
+}
+function markEvStatus() {
+  const b = $("evStatus").querySelectorAll("button");
+  for (let i = 0; i < b.length; i++) b[i].classList.toggle("on", b[i].getAttribute("data-st") === evStat);
 }
 function dayLabel(d) {
   const t = sod(new Date()), diff = Math.round((sod(d) - t) / 86400000);
@@ -741,6 +807,7 @@ function dayLabel(d) {
   return cap(fmt(d, { weekday: "long", day: "numeric", month: "long" }));
 }
 function markSeg() {
+  markFilter();
   const b = $("seg").querySelectorAll("button");
   for (let i = 0; i < b.length; i++) b[i].classList.toggle("on", b[i].getAttribute("data-mode") === calMode);
 }
@@ -880,12 +947,12 @@ async function renderCalendar() {
     draw = function (map) { drawAgenda(body, map, from); };
   }
   const cached = evCache[evKey(from, to)];
-  if (cached) { draw(bucket(cached, from, to)); return; }
+  if (cached) { draw(bucket(cached, from, to, true)); return; }
   draw(null);
   try {
     const evs = await fetchEvents(from, to);
     if (my !== calSeq) return;
-    draw(bucket(evs, from, to));
+    draw(bucket(evs, from, to, true));
   } catch (e) {
     if (my !== calSeq) return;
     if (e.code === "auth") return;
@@ -932,6 +999,8 @@ function openEvent(ev, day) {
   $("evLoc").value = ev ? ev.location : "";
   $("evDesc").value = ev ? ev.description : "";
   $("evNote").textContent = ev && ev.recurring ? "Повторяющееся событие: изменится только это вхождение." : "";
+  evStat = ev ? ev.status : "plan"; markEvStatus();
+  $("evRepeat").value = ""; $("evRepBox").style.display = ev && ev.recurring ? "none" : "block";
   $("evDel").style.visibility = ev ? "visible" : "hidden";
   resetEvDel();
   showTab("calendar", true);
@@ -962,6 +1031,17 @@ async function saveEvent() {
     body.start = { dateTime: rfc(s) }; body.end = { dateTime: rfc(e) };
     if (editingEv) { body.start.date = null; body.end.date = null; }
   }
+  const rep = $("evRepBox").style.display === "none" ? "" : $("evRepeat").value;
+  const RULES = { DAILY: "RRULE:FREQ=DAILY", WEEKDAYS: "RRULE:FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR", WEEKLY: "RRULE:FREQ=WEEKLY", MONTHLY: "RRULE:FREQ=MONTHLY", YEARLY: "RRULE:FREQ=YEARLY" };
+  if (rep && RULES[rep]) {
+    body.recurrence = [RULES[rep]];
+    if (!allDay) {
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "Europe/Moscow";
+      body.start.timeZone = tz; body.end.timeZone = tz;
+    }
+  }
+  // у нового повторяющегося события статус не задаём: каждое вхождение начинается «в планах»
+  if (editingEv || !(rep && RULES[rep])) body.extendedProperties = { private: { status: evStat } };
   evBusy = true; $("evSave").disabled = true;
   try {
     await gfetch(editingEv ? calBase() + "/" + encodeURIComponent(editingEv.id) : calBase(), {
@@ -999,6 +1079,11 @@ function setupEventEditor() {
   $("evBack").onclick = function () { closeEvent(); };
   $("evDel").onclick = deleteEvent;
   $("evSave").onclick = saveEvent;
+  $("evStatus").onclick = function (e) { const t = e.target.closest("button"); if (!t) return; evStat = t.getAttribute("data-st"); markEvStatus(); };
+  $("stFilter").onclick = function (e) {
+    const t = e.target.closest("button"); if (!t) return;
+    stFilter = t.getAttribute("data-st"); store("stFilter", stFilter); renderCalendar();
+  };
   $("evAllDay").onchange = function () { $("evForm").classList.toggle("allday", this.checked); };
   function startChanged() { const s = readDT("evStart"); if (s) writeDT("evEnd", new Date(s.getTime() + evDur)); }
   function endChanged() { const s = readDT("evStart"), e = readDT("evEnd"); if (s && e) evDur = Math.max(0, e - s); }
@@ -1015,8 +1100,8 @@ function setupEventEditor() {
 /* =====================================================================
    ОБЗОР: ближайшие события и показатели
    ===================================================================== */
-const ser = (e) => ({ id: e.id, title: e.title, allDay: e.allDay, s: e.start.getTime(), e: e.end.getTime(), loc: e.location, desc: e.description, rec: e.recurring });
-const deser = (o) => ({ id: o.id, title: o.title, allDay: o.allDay, start: new Date(o.s), end: new Date(o.e), location: o.loc, description: o.desc, recurring: o.rec });
+const ser = (e) => ({ id: e.id, title: e.title, allDay: e.allDay, s: e.start.getTime(), e: e.end.getTime(), loc: e.location, desc: e.description, rec: e.recurring, st: e.status });
+const deser = (o) => ({ id: o.id, title: o.title, allDay: o.allDay, start: new Date(o.s), end: new Date(o.e), location: o.loc, description: o.desc, recurring: o.rec, status: normStatus(o.st) });
 let upcoming = null;
 try { const j = JSON.parse(store("upcoming") || "null"); if (j && j.events) upcoming = { ts: j.ts, events: j.events.map(deser) }; } catch (e) {}
 
