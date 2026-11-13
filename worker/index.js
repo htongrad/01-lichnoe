@@ -1,3 +1,4 @@
+import {authRoute, loginPage, ready, signedInUser} from './google-auth.js';
 const appHtml = "__PANEL_HTML__";
 const privateHeaders = {'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','X-Frame-Options':'SAMEORIGIN'};
 const json = (value, status = 200) => Response.json(value, {status, headers:privateHeaders});
@@ -6,8 +7,15 @@ const empty = {events:[], notes:[]};
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    const user = request.headers.get('oai-authenticated-user-id');
-    if (!user) return json({error:'Войдите в ChatGPT, чтобы открыть панель.'}, 401);
+    if (!ready(env) || url.origin !== env.APP_ORIGIN) return json({error:'Вход через Google ещё не настроен.'}, 503);
+    if (url.pathname.startsWith('/auth/')) {
+      return await authRoute(request, env, url) ?? json({error:'Страница не найдена.'}, 404);
+    }
+    const user = await signedInUser(request, env);
+    if (!user && url.pathname === '/' && request.method === 'GET') {
+      return new Response(loginPage(url.searchParams.get('auth')), {headers:{...privateHeaders,'Content-Type':'text/html; charset=utf-8'}});
+    }
+    if (!user) return json({error:'Войдите через Google.'}, 401);
     if (url.pathname === '/' && request.method === 'GET') {
       return new Response(appHtml, {headers:{...privateHeaders,'Content-Type':'text/html; charset=utf-8'}});
     }

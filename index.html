@@ -98,6 +98,7 @@
 #personal .action { border-radius:.6rem; padding:.4rem .7rem; background:var(--tint); color:var(--green); font-weight:700; }
 #personal .primary { background:var(--green); color:var(--paper); }
 #personal form { display:grid; gap:.65rem; padding-top:.7rem; }
+#personal header form { display:block; padding:0; margin:0; }
 #personal form label { display:grid; gap:.2rem; min-width:0; }
 #personal form .check { display:flex; align-items:center; min-height:44px; gap:.45rem; }
 #personal input:not([type=checkbox]), #personal select, #personal textarea { width:100%; min-width:0; max-width:100%; min-height:44px; font:inherit; color:var(--text); background:var(--paper); border:1px solid var(--line); border-radius:.5rem; padding:.4rem; }
@@ -119,7 +120,7 @@ body { margin: 0; background: light-dark(#e6ebdf, #101913); color-scheme: light 
 </head>
 <body>
 <div id="personal">
-  <header><span class="brand">Личное</span><a class="back" href="/signout-with-chatgpt" target="_top">Выйти</a></header>
+  <header><span class="brand">Личное</span><form action="/auth/signout" method="post"><button type="submit" class="back">Выйти</button></form></header>
   <p class="notice" role="status" hidden></p>
   <main></main>
   <div class="bottom">
