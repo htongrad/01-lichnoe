@@ -76,8 +76,25 @@
 #personal nav button { padding: .3rem .1rem; font-size: .82em; }
 @media (max-width: 359px) { #personal .notes { grid-template-columns: minmax(0, 1fr); } }
 @media (forced-colors: active) { #personal .hero { border: 1px solid CanvasText; } #personal .hero h1, #personal .hero p { color: CanvasText; } }
-#personal .section-title { display:flex; align-items:center; justify-content:space-between; gap:.4rem; flex-wrap:wrap; margin:.6rem 0; }
-#personal .section-title h2 { margin:0; }
+#personal:has(.create:not([hidden])) main { padding-bottom: 4.75rem; }
+#personal .bottom { position:relative; z-index:1; }
+#personal .create {
+  position:absolute;
+  inset-inline-end:max(.85rem, env(safe-area-inset-right));
+  bottom:calc(100% + .65rem);
+  display:grid;
+  place-items:center;
+  width:3.5rem;
+  height:3.5rem;
+  padding:0;
+  border-radius:50%;
+  background:var(--green);
+  color:var(--paper);
+  font-size:1.9rem;
+  line-height:1;
+  box-shadow:0 .2rem .7rem #10231945;
+}
+@media (forced-colors: active) { #personal .create { border:1px solid ButtonText; } }
 #personal .action { border-radius:.6rem; padding:.4rem .7rem; background:var(--tint); color:var(--green); font-weight:700; }
 #personal .primary { background:var(--green); color:var(--paper); }
 #personal form { display:grid; gap:.65rem; padding-top:.7rem; }
@@ -97,7 +114,7 @@
 <style>
 body { margin: 0; background: light-dark(#e6ebdf, #101913); color-scheme: light dark; }
 #personal { min-height: 100dvh; }
-#personal nav { position: sticky; bottom: 0; }
+#personal .bottom { position: sticky; bottom: 0; }
 </style>
 </head>
 <body>
@@ -105,17 +122,21 @@ body { margin: 0; background: light-dark(#e6ebdf, #101913); color-scheme: light 
   <header><span class="brand">Личное</span><small>Локальная версия</small></header>
   <p class="notice" role="status" hidden></p>
   <main></main>
-  <nav aria-label="Разделы">
-    <button type="button" data-page="overview">Обзор</button>
-    <button type="button" data-page="calendar">Календарь</button>
-    <button type="button" data-page="notes">Заметки</button>
-  </nav>
+  <div class="bottom">
+    <button type="button" class="create" aria-label="Создать запись" hidden>+</button>
+    <nav aria-label="Разделы">
+      <button type="button" data-page="overview">Обзор</button>
+      <button type="button" data-page="calendar">Календарь</button>
+      <button type="button" data-page="notes">Заметки</button>
+    </nav>
+  </div>
 </div>
 <script id="personal-script">
 (() => {
   const root = document.getElementById('personal');
   const main = root.querySelector('main');
   const nav = root.querySelector('nav');
+  const create = root.querySelector('.create');
   const notice = root.querySelector('.notice');
   const storageKey = 'lichnoe:v1';
   const labels = {overview:'Обзор', calendar:'Календарь', notes:'Заметки'};
@@ -218,9 +239,6 @@ body { margin: 0; background: light-dark(#e6ebdf, #101913); color-scheme: light 
       <button type="button" class="note" data-note="${escape(note.id)}"><strong>${escape(note.title)}</strong><small>${escape(note.text)}</small></button>`).join('')}</div>`
       : '<p class="empty">Нет заметок</p>';
   }
-  function sectionTitle(title, action, label) {
-    return `<div class="section-title"><h2>${title}</h2><button type="button" class="action" data-action="${action}">${label}</button></div>`;
-  }
   function calendar() {
     const first = asDate(month + '-01');
     const offset = (first.getUTCDay() + 6) % 7;
@@ -234,7 +252,7 @@ body { margin: 0; background: light-dark(#e6ebdf, #101913); color-scheme: light 
       <button type="button" data-month="1" aria-label="Следующий месяц">›</button></div>
       <div class="days">${['Пн','Вт','Ср','Чт','Пт','Сб','Вс'].map(day => `<span>${day}</span>`).join('')}
       ${'<span aria-hidden="true"></span>'.repeat(offset)}${dates}</div></div>
-      ${sectionTitle(capital(fullDate.format(asDate(selected))), 'new-event', '+ Событие')}${eventList(selected)}`;
+      <h2>${capital(fullDate.format(asDate(selected)))}</h2>${eventList(selected)}`;
   }
   function optionList(values, value) {
     return Object.entries(values).map(([id,label]) => `<option value="${id}"${id === value ? ' selected' : ''}>${label}</option>`).join('');
@@ -303,8 +321,11 @@ body { margin: 0; background: light-dark(#e6ebdf, #101913); color-scheme: light 
       main.innerHTML = `${hero('Обзор', capital(fullDate.format(asDate(today))))}<h2>Сегодня</h2>${eventList(today)}
         <h2>Недавние заметки</h2>${noteList(true)}`;
     } else {
-      main.innerHTML = page === 'calendar' ? calendar() : `${hero('Заметки')}${sectionTitle('Все заметки', 'new-note', '+ Заметка')}${noteList(false)}`;
+      main.innerHTML = page === 'calendar' ? calendar() : `${hero('Заметки')}<h2>Все заметки</h2>${noteList(false)}`;
     }
+    create.hidden = Boolean(view) || page === 'overview';
+    create.dataset.action = page === 'calendar' ? 'new-event' : 'new-note';
+    create.setAttribute('aria-label', page === 'calendar' ? 'Создать событие' : 'Создать заметку');
     nav.querySelectorAll('button').forEach(button => {
       if (button.dataset.page === page) button.setAttribute('aria-current', 'page');
       else button.removeAttribute('aria-current');
@@ -420,6 +441,7 @@ body { margin: 0; background: light-dark(#e6ebdf, #101913); color-scheme: light 
     else if (action === 'back') view = null;
     else return;
     render();
+    if (action === 'new-event' || action === 'new-note') main.querySelector('h1').scrollIntoView({block:'start'});
     if (day) main.querySelector('[data-day="' + day + '"]')?.focus({preventScroll:true});
     if (direction) main.querySelector('[data-month="' + direction + '"]')?.focus({preventScroll:true});
   });
