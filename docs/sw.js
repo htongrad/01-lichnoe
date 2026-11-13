@@ -1,9 +1,10 @@
 const prefix = 'lichnoe-shell-';
-const cacheName = prefix + 'v2';
+const cacheName = prefix + 'v3';
 const home = new URL('./', self.registration.scope);
 const shell = new URL('index.html', home);
+const syncScript = new URL('google-sync.js', home);
 self.addEventListener('install', event => {
-  event.waitUntil(caches.open(cacheName).then(cache => cache.add(shell.href)));
+  event.waitUntil(caches.open(cacheName).then(cache => cache.addAll([shell.href, syncScript.href])));
 });
 self.addEventListener('activate', event => {
   event.waitUntil(caches.keys().then(keys => Promise.all(keys
@@ -11,8 +12,13 @@ self.addEventListener('activate', event => {
     .map(key => caches.delete(key)))).then(() => self.clients.claim()));
 });
 self.addEventListener('fetch', event => {
-  if (event.request.method !== 'GET' || event.request.mode !== 'navigate') return;
+  if (event.request.method !== 'GET') return;
   const url = new URL(event.request.url);
+  if (url.href === syncScript.href) {
+    event.respondWith(fetch(event.request).catch(async () => (await caches.match(syncScript.href)) ?? Response.error()));
+    return;
+  }
+  if (event.request.mode !== 'navigate') return;
   if (url.origin !== home.origin || ![home.pathname, shell.pathname].includes(url.pathname)) return;
   event.respondWith((async () => {
     const cache = await caches.open(cacheName);

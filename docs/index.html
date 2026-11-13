@@ -173,6 +173,7 @@ body { margin: 0; background: light-dark(#e6ebdf, #101913); color-scheme: light 
   <header><span class="brand"><span class="panel-mark" aria-hidden="true">01</span>Личное</span><details class="menu">
     <summary class="action" aria-label="Меню">⋯</summary>
     <div class="menu-items">
+      <button type="button" data-action="google">Синхронизация Google</button>
       <button type="button" data-action="backups">Копии данных</button>
       <button type="button" data-action="install" hidden>Установить приложение</button>
     </div>
@@ -189,6 +190,7 @@ body { margin: 0; background: light-dark(#e6ebdf, #101913); color-scheme: light 
     </nav>
   </div>
 </div>
+<script src="./google-sync.js"></script>
 <script id="personal-script">
 (() => {
   const root = document.getElementById('personal');
@@ -196,6 +198,7 @@ body { margin: 0; background: light-dark(#e6ebdf, #101913); color-scheme: light 
   const nav = root.querySelector('nav');
   const create = root.querySelector('.create');
   const notice = root.querySelector('.notice');
+  const googleSync = window.lichnoeGoogle;
   const storageKey = 'lichnoe:v1';
   const menu = root.querySelector('.menu');
   const installButton = menu.querySelector('[data-action=install]');
@@ -258,6 +261,7 @@ body { margin: 0; background: light-dark(#e6ebdf, #101913); color-scheme: light 
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
   backupFile.addEventListener('change', async () => {
+    googleSync?.clearRestore();
     const file = backupFile.files[0];
     backupFile.value = '';
     if (!file) return;
@@ -286,6 +290,7 @@ body { margin: 0; background: light-dark(#e6ebdf, #101913); color-scheme: light 
     try {
       localStorage.setItem(storageKey, JSON.stringify(records));
       showNotice('');
+      googleSync?.schedule();
       return true;
     } catch {
       showNotice('Браузер не сохранил изменения. Скачайте копию до закрытия панели.');
@@ -433,7 +438,9 @@ body { margin: 0; background: light-dark(#e6ebdf, #101913); color-scheme: light 
     get('until').disabled = !get('until').required;
   }
   function render() {
-    if (view?.type === 'backups') {
+    if (view?.type === 'google') {
+      main.innerHTML = hero('Синхронизация Google') + (googleSync?.html() ?? '<p>Подключение доступно после загрузки панели с интернетом.</p>');
+    } else if (view?.type === 'backups') {
       main.innerHTML = `${hero('Копии данных')}
         <p>События и заметки сохраняются в этом браузере.</p>
         <div class="controls"><button type="button" class="action" data-action="export">Скачать копию</button>
@@ -503,6 +510,7 @@ body { margin: 0; background: light-dark(#e6ebdf, #101913); color-scheme: light 
     event.preventDefault();
     if (!storageReadable) return;
     const form = event.target;
+    if (form.hasAttribute('data-google-config')) { googleSync.configure(form); return; }
     const values = new FormData(form);
     const get = name => String(values.get(name) ?? '');
     const original = view.record;
@@ -575,6 +583,8 @@ body { margin: 0; background: light-dark(#e6ebdf, #101913); color-scheme: light 
       prompt.prompt().catch(() => showNotice('Откройте меню Chrome, чтобы установить приложение.'));
       return;
     }
+    if (button.dataset.google) { googleSync.action(button.dataset.google); return; }
+    if (action === 'google') { view = {type:'google'}; render(); return; }
     if (action === 'export') { downloadBackup(); return; }
     if (action === 'import') { backupFile.click(); return; }
     if (action === 'restore' && candidate) {
@@ -585,10 +595,11 @@ body { margin: 0; background: light-dark(#e6ebdf, #101913); color-scheme: light 
       const merged = {events:addMissing(data.events,candidate.events), notes:addMissing(data.notes,candidate.notes)};
       if (save(merged)) {
         data = merged;
+        googleSync?.restored();
         candidate = null;
         showNotice('Копия добавлена в браузер.');
       }
-    } else if (action === 'backups') { candidate = null; view = {type:'backups'}; }
+    } else if (action === 'backups') { googleSync?.clearRestore(); candidate = null; view = {type:'backups'}; }
     else if (!storageReadable && ['edit','delete','new-event','new-note'].includes(action)) return;
     else if (destination) { page = destination; view = null; }
     else if (direction) {
@@ -631,6 +642,32 @@ body { margin: 0; background: light-dark(#e6ebdf, #101913); color-scheme: light 
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').catch(error => console.warn('Service worker:', error));
   }
+  googleSync?.init({
+    records() {
+      if (!storageReadable) throw new Error('Записи браузера недоступны. Синхронизация остановлена.');
+      const saved = localStorage.getItem(storageKey);
+      if (!saved && (data.events.length || data.notes.length)) throw new Error('Сначала сохраните записи в браузере.');
+      if (saved && JSON.stringify(validate(JSON.parse(saved))) !== JSON.stringify(data)) {
+        throw new Error('Записи изменились в другом окне или не были сохранены. Обновите панель.');
+      }
+      return data;
+    },
+    occurs,
+    countThrough(event,date) {
+      if (date < event.date) return 0;
+      let slot = date;
+      let count = 0;
+      while (slot >= event.date && !(count = ordinal(event,slot))) slot = offsetDay(slot,-1);
+      return count;
+    },
+    refresh() { if (view?.type === 'google') render(); },
+    offerRestore(value) {
+      candidate = validate(value);
+      view = {type:'backups'};
+      showNotice('Копия загружена с Диска. Добавьте записи из копии, чтобы сохранить их в браузере.');
+      render();
+    }
+  });
   render();
 })();
 </script>
