@@ -7,19 +7,19 @@
 <meta name="theme-color" content="#10482f">
 <meta name="description" content="Личная панель с календарём и заметками.">
 <link rel="manifest" href="./manifest.webmanifest">
-<link rel="icon" href="./icon-192.png">
-<link rel="apple-touch-icon" href="./icon-192.png">
+<link rel="icon" href="./icon-192.png?v=2">
+<link rel="apple-touch-icon" href="./icon-192.png?v=2">
 <style id="personal-styles">
 #personal, #personal * { box-sizing: border-box; }
 #personal {
   color-scheme: light dark;
-  --background: #f3f6ec;
-  --paper: #fdfef7;
-  --text: #102319;
-  --secondary: #2d4435;
-  --line: #d4e0d2;
+  --background: #ebf1ea;
+  --paper: #ffffff;
+  --text: #14271c;
+  --secondary: #304639;
+  --line: #c4d4c7;
   --green: #10482f;
-  --tint: #dfecd4;
+  --tint: #d9ebd8;
   display: flex;
   flex-direction: column;
   width: min(100%, 32rem);
@@ -31,13 +31,13 @@
 }
 @media (prefers-color-scheme: dark) {
   #personal {
-    --background: #18241d;
-    --paper: #233128;
-    --text: #f4faef;
-    --secondary: #d9e9d9;
-    --line: #536a58;
-    --green: #b6f0c3;
-    --tint: #314933;
+    --background: #15231b;
+    --paper: #203329;
+    --text: #f4fbf5;
+    --secondary: #d5e7d8;
+    --line: #566f5e;
+    --green: #b5e8ba;
+    --tint: #2d4735;
   }
 }
 #personal header { padding: .85rem 1rem 0; display: flex; align-items: center; justify-content: space-between; gap: .5rem; flex-wrap: wrap; }
@@ -45,9 +45,8 @@
 #personal small { color: var(--secondary); font-size: .875em; }
 #personal main { flex: 1; min-width: 0; padding: .85rem clamp(.65rem, 4vw, 1.15rem) 1.2rem; }
 #personal .hero {
-  background-color: #123b2c;
-  background-image: radial-gradient(ellipse at 105% 105%, transparent 28%, #ffffff24 28.3% 29%, transparent 29.4% 37%, #ffffff24 37.3% 38%, transparent 38.4%), linear-gradient(115deg, #123b2c, #246448);
-  border-radius: 1rem;
+  background: #10482f;
+  border-radius: .85rem;
   padding: 1rem;
 }
 #personal .hero h1, #personal .hero p { color: #fff; margin: 0; }
@@ -97,7 +96,7 @@
   color:var(--paper);
   font-size:1.9rem;
   line-height:1;
-  box-shadow:0 .2rem .7rem #10231945;
+  box-shadow:0 .2rem .7rem #14271c45;
 }
 @media (forced-colors: active) { #personal .create { border:1px solid ButtonText; } }
 #personal .action { border-radius:.6rem; padding:.4rem .7rem; background:var(--tint); color:var(--green); font-weight:700; }
@@ -115,7 +114,7 @@
 #personal .notes.all { grid-template-columns:minmax(0,1fr); }
 #personal .notes small { white-space:pre-line; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; }
 @media (max-width: 23rem) { #personal .times { grid-template-columns:minmax(0,1fr); } }
-#personal { --shadow: 0 2px 6px #10231920; }
+#personal { --shadow: 0 2px 6px #14271c20; }
 #personal .hero, #personal .events, #personal .month, #personal .record, #personal .note { box-shadow:var(--shadow); }
 #personal .hero { border:1px solid #ffffff26; }
 #personal .section { margin-block:1rem; }
@@ -125,7 +124,7 @@
 #personal .back { border-radius:.6rem; padding-inline:.65rem; margin-bottom:.5rem; background:var(--paper); }
 #personal .month-controls { gap:.25rem; padding:.25rem; }
 #personal .month-controls button { border-radius:.55rem; background:var(--tint); }
-#personal nav { gap:.35rem; box-shadow:0 -2px 8px #10231917; }
+#personal nav { gap:.35rem; box-shadow:0 -2px 8px #14271c17; }
 #personal nav button { border:1px solid var(--line); border-radius:.65rem; }
 #personal nav button[aria-current="page"] { border-color:var(--green); border-radius:.65rem; }
 #personal .menu { position:relative; z-index:2; }
@@ -138,6 +137,30 @@
 #personal .agenda-day h3 { margin:0 0 .25rem; color:var(--green); font-size:.87em; }
 #personal .agenda-range { display:block; margin:-.2rem 0 .5rem; }
 #personal .event { grid-template-columns:minmax(0, 5.25rem) minmax(0,1fr); }
+#personal .brand { display:inline-flex; align-items:center; gap:.55rem; color:var(--text); }
+#personal .panel-mark { display:grid; place-items:center; min-width:2.2rem; min-height:2.2rem; padding:.2rem; border-radius:.55rem; background:#10482f; color:#fff; font-weight:850; }
+#personal .overview-modules { display:grid; gap:.7rem; margin-top:.8rem; grid-template-columns:repeat(2,minmax(0,1fr)); }
+#personal .section { min-width:0; background:var(--paper); border:1px solid var(--line); border-radius:.85rem; box-shadow:0 2px 0 var(--line); padding:.7rem; }
+#personal .overview-modules .section { margin:0; }
+#personal .notes-module { grid-column:1 / -1; }
+#personal .section .events, #personal .section .month, #personal .section .empty { border:0; box-shadow:none; padding:0; }
+#personal .section .agenda-day + .agenda-day { border-top:1px solid var(--line); padding-top:.55rem; }
+#personal .overview-modules .event { display:flex; flex-direction:column; gap:.15rem; }
+#personal .overview-modules .notes { grid-template-columns:minmax(0,1fr); }
+#personal .note:first-child { background:var(--paper); }
+#personal .note small { color:var(--secondary); }
+#personal .days button[aria-pressed="true"],
+#personal nav button[aria-current="page"],
+#personal .primary,
+#personal .create { background:#10482f; color:#fff; border-color:#10482f; }
+#personal .controls button:not(.primary) { border:1px solid var(--line); border-radius:.6rem; padding-inline:.7rem; background:var(--paper); }
+#personal .action { min-height:44px; }
+@media (max-width: 359px) { #personal .overview-modules { grid-template-columns:minmax(0,1fr); } }
+@media (forced-colors: active) {
+  #personal .panel-mark, #personal nav button[aria-current="page"], #personal .days button[aria-pressed="true"] {
+    border:2px solid CanvasText;
+  }
+}
 </style>
 <style>
 body { margin: 0; background: light-dark(#e6ebdf, #101913); color-scheme: light dark; }
@@ -147,7 +170,7 @@ body { margin: 0; background: light-dark(#e6ebdf, #101913); color-scheme: light 
 </head>
 <body>
 <div id="personal">
-  <header><span class="brand">Личное</span><details class="menu">
+  <header><span class="brand"><span class="panel-mark" aria-hidden="true">01</span>Личное</span><details class="menu">
     <summary class="action" aria-label="Меню">⋯</summary>
     <div class="menu-items">
       <button type="button" data-action="backups">Копии данных</button>
@@ -355,12 +378,12 @@ body { margin: 0; background: light-dark(#e6ebdf, #101913); color-scheme: light 
       const date = month + '-' + String(index + 1).padStart(2, '0');
       return `<button type="button" data-day="${date}" aria-pressed="${selected === date}">${index + 1}</button>`;
     }).join('');
-    return `${hero('Календарь')}<h2>Выбрать день</h2><div class="month"><div class="month-controls">
+    return `${hero('Календарь')}<section class="section"><h2>Выбрать день</h2><div class="month"><div class="month-controls">
       <button type="button" data-month="-1" aria-label="Предыдущий месяц">‹</button><strong>${capital(monthName.format(first))}</strong>
       <button type="button" data-month="1" aria-label="Следующий месяц">›</button></div>
       <div class="days">${['Пн','Вт','Ср','Чт','Пт','Сб','Вс'].map(day => `<span>${day}</span>`).join('')}
-      ${'<span aria-hidden="true"></span>'.repeat(offset)}${dates}</div></div>
-      <h2>${capital(fullDate.format(asDate(selected)))}</h2>${eventList(selected)}
+      ${'<span aria-hidden="true"></span>'.repeat(offset)}${dates}</div></div></section>
+      <section class="section"><h2>${capital(fullDate.format(asDate(selected)))}</h2>${eventList(selected)}</section>
       ${weekAgenda(selected)}
       ${agenda('События месяца', month + '-01', month + '-' + count, capital(monthName.format(first)))}`;
   }
@@ -435,10 +458,14 @@ body { margin: 0; background: light-dark(#e6ebdf, #101913); color-scheme: light 
         <p class="record">${escape(detail)}</p><div class="controls"><button type="button" class="action" data-action="edit">Изменить</button>
         <button type="button" data-action="delete">Удалить</button></div>`;
     } else if (page === 'overview') {
-      main.innerHTML = `${hero('Обзор', capital(fullDate.format(asDate(today))))}<h2>Сегодня</h2>${eventList(today)}${weekAgenda(today)}
-        <h2>Недавние заметки</h2>${noteList(true)}`;
+      main.innerHTML = `${hero('Обзор', capital(fullDate.format(asDate(today))))}
+        <div class="overview-modules">
+          <section class="section today-module"><h2>Сегодня</h2>${eventList(today)}</section>
+          ${weekAgenda(today)}
+          <section class="section notes-module"><h2>Недавние заметки</h2>${noteList(true)}</section>
+        </div>`;
     } else {
-      main.innerHTML = page === 'calendar' ? calendar() : `${hero('Заметки')}<h2>Все заметки</h2>${noteList(false)}`;
+      main.innerHTML = page === 'calendar' ? calendar() : `${hero('Заметки')}<section class="section"><h2>Все заметки</h2>${noteList(false)}</section>`;
     }
     create.hidden = !storageReadable || Boolean(view) || page === 'overview';
     create.dataset.action = page === 'calendar' ? 'new-event' : 'new-note';

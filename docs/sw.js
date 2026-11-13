@@ -1,5 +1,5 @@
 const prefix = 'lichnoe-shell-';
-const cacheName = prefix + 'v1';
+const cacheName = prefix + 'v2';
 const home = new URL('./', self.registration.scope);
 const shell = new URL('index.html', home);
 self.addEventListener('install', event => {
