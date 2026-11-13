@@ -251,10 +251,10 @@
     html() {
       const disabled = busy || connecting ? ' disabled' : '';
       if (!settings.clientId) return `<form data-google-config>
-        <label>Идентификатор OAuth клиента<input name="clientId" required placeholder="…apps.googleusercontent.com"></label>
+        <label>Идентификатор OAuth клиента<input name="clientId" required autocapitalize="none" spellcheck="false" placeholder="…apps.googleusercontent.com"></label>
         <label>Номер проекта Google Cloud<input name="projectNumber" required inputmode="numeric"></label>
-        <label>Ключ Google Picker<input name="apiKey" required></label>
-        <button type="submit" class="action primary">Сохранить настройки</button></form><p class="record" role="status">${esc(status)}</p>`;
+        <label>Ключ Google Picker<input name="apiKey" required autocapitalize="none" spellcheck="false"></label>
+        <button type="submit" class="action primary">Сохранить настройки</button><p role="alert" data-google-validation></p></form><p class="record" role="status">${esc(status)}</p>`;
       return `<p class="record" role="status">${esc(status || 'Записи хранятся в браузере. Google получает резервную копию и зеркало событий.')}</p>
       <div class="controls">${ready()
         ? `<button type="button" class="action" data-google="folder"${disabled}>${settings.folder?'Изменить папку':'Выбрать папку на Диске'}</button>
@@ -266,14 +266,34 @@
     },
     configure(form) {
       const fields = new FormData(form);
-      const clientId = String(fields.get('clientId')).trim();
-      const projectNumber = String(fields.get('projectNumber')).trim();
-      const apiKey = String(fields.get('apiKey')).trim();
-      if (!/^[\w-]+\.apps\.googleusercontent\.com$/.test(clientId) || !/^\d+$/.test(projectNumber) || !apiKey) {
-        status = 'Проверьте данные проекта Google Cloud.'; api.refresh(); return;
+      const copied = name => String(fields.get(name) ?? '')
+        .replace(/[\u200B-\u200D\u2060\uFEFF]/gu, '').trim();
+      const clientId = copied('clientId');
+      const projectNumber = copied('projectNumber').replace(/\s/gu, '');
+      const apiKey = copied('apiKey');
+      const invalid = [
+        ['clientId', /^[A-Za-z0-9_-]+\.apps\.googleusercontent\.com$/.test(clientId),
+          'Вставьте Client ID из Google Auth Platform → Clients. Он заканчивается на .apps.googleusercontent.com.'],
+        ['projectNumber', /^\d+$/.test(projectNumber),
+          'Вставьте Project number из настроек проекта Google Cloud. Это число, например 123456789012, а не Project ID.'],
+        ['apiKey', /^[A-Za-z0-9_-]+$/.test(apiKey),
+          'Вставьте значение API key из Credentials. Используйте кнопку копирования ключа.']
+      ].find(([,valid]) => !valid);
+      if (invalid) {
+        const [name,,message] = invalid;
+        const input = form.elements.namedItem(name);
+        const hint = form.querySelector('[data-google-validation]');
+        hint.textContent = message;
+        input.focus();
+        return;
       }
-      settings = {clientId,projectNumber,apiKey};
-      persist();
+      const next = {clientId,projectNumber,apiKey};
+      try { localStorage.setItem(stateKey, JSON.stringify(next)); }
+      catch {
+        form.querySelector('[data-google-validation]').textContent = 'Браузер не сохранил настройки. Откройте панель в обычной вкладке Chrome.';
+        return;
+      }
+      settings = next;
       status = 'Настройки сохранены.';
       api.refresh();
     },
