@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Личное</title>
+<style id="personal-styles">
+#personal, #personal * { box-sizing: border-box; }
+#personal {
+  color-scheme: light dark;
+  --background: #f3f6ec;
+  --paper: #fdfef7;
+  --text: #102319;
+  --secondary: #2d4435;
+  --line: #d4e0d2;
+  --green: #10482f;
+  --tint: #dfecd4;
+  display: flex;
+  flex-direction: column;
+  width: min(100%, 32rem);
+  margin-inline: auto;
+  background: var(--background);
+  color: var(--text);
+  font: 1rem/1.45 system-ui, sans-serif;
+  overflow-wrap: anywhere;
+}
+@media (prefers-color-scheme: dark) {
+  #personal {
+    --background: #18241d;
+    --paper: #233128;
+    --text: #f4faef;
+    --secondary: #d9e9d9;
+    --line: #536a58;
+    --green: #b6f0c3;
+    --tint: #314933;
+  }
+}
+#personal header { padding: .85rem 1rem 0; display: flex; align-items: center; justify-content: space-between; gap: .5rem; flex-wrap: wrap; }
+#personal .brand { color: var(--green); font-weight: 750; }
+#personal small { color: var(--secondary); font-size: .875em; }
+#personal main { flex: 1; min-width: 0; padding: .85rem clamp(.65rem, 4vw, 1.15rem) 1.2rem; }
+#personal .hero {
+  background-color: #123b2c;
+  background-image: radial-gradient(ellipse at 105% 105%, transparent 28%, #ffffff24 28.3% 29%, transparent 29.4% 37%, #ffffff24 37.3% 38%, transparent 38.4%), linear-gradient(115deg, #123b2c, #246448);
+  border-radius: 1rem;
+  padding: 1rem;
+}
+#personal .hero h1, #personal .hero p { color: #fff; margin: 0; }
+#personal .hero p { margin-top: .25rem; font-size: .9em; }
+#personal h1 { font-size: 1.7em; line-height: 1.15; letter-spacing: -.035em; }
+#personal h2 { font-size: 1em; margin: 1rem 0 .4rem; }
+#personal button { font: inherit; color: inherit; border: 0; background: none; min-height: 44px; min-width: 0; cursor: pointer; }
+#personal :focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+#personal .events, #personal .month, #personal .record { background: var(--paper); border: 1px solid var(--line); border-radius: .8rem; }
+#personal .events { padding: 0 .65rem; }
+#personal .event, #personal .note { display: block; text-align: start; width: 100%; padding: .55rem 0; }
+#personal .event { display: grid; grid-template-columns: minmax(3.25em, max-content) minmax(0, 1fr); gap: .45rem; align-items: start; }
+#personal .event + .event { border-top: 1px solid var(--line); }
+#personal .event time { font-variant-numeric: tabular-nums; color: var(--green); }
+#personal .event small, #personal .note small { display: block; }
+#personal .notes { display: grid; gap: .4rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+#personal .note { border: 1px solid var(--line); border-radius: .65rem; background: var(--paper); padding: .55rem .65rem; }
+#personal .note:first-child { grid-column: 1 / -1; background: var(--tint); }
+#personal .month { padding: .3rem; }
+#personal .month-controls { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; align-items: center; text-align: center; }
+#personal .month-controls button { color: var(--green); font-size: 1.45em; }
+#personal .days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); text-align: center; }
+#personal .days span { font-size: .75em; color: var(--secondary); padding-block: .4rem; }
+#personal .days button { padding: 0; font-size: .85em; font-variant-numeric: tabular-nums; }
+#personal .days button[aria-pressed="true"], #personal nav button[aria-current="page"] { background: var(--tint); color: var(--green); border-radius: .55rem; font-weight: 700; }
+#personal .empty, #personal .record { padding: .7rem; }
+#personal .empty { margin: 0; color: var(--secondary); }
+#personal .record { margin-top: .7rem; }
+#personal .back { color: var(--green); padding: 0 .15rem; }
+#personal nav { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .2rem; border-top: 1px solid var(--line); background: var(--paper); padding: .35rem .45rem max(.35rem, env(safe-area-inset-bottom)); }
+#personal nav button { padding: .3rem .1rem; font-size: .82em; }
+@media (max-width: 359px) { #personal .notes { grid-template-columns: minmax(0, 1fr); } }
+@media (forced-colors: active) { #personal .hero { border: 1px solid CanvasText; } #personal .hero h1, #personal .hero p { color: CanvasText; } }
+</style>
+<style>
+body { margin: 0; background: light-dark(#e6ebdf, #101913); color-scheme: light dark; }
+#personal { min-height: 100dvh; }
+#personal nav { position: sticky; bottom: 0; }
+</style>
+</head>
+<body>
+<div id="personal">
+  <header><span class="brand">Личное</span><small>Демонстрационные данные</small></header>
+  <main></main>
+  <nav aria-label="Разделы">
+    <button type="button" data-page="overview">Обзор</button>
+    <button type="button" data-page="calendar">Календарь</button>
+    <button type="button" data-page="notes">Заметки</button>
+  </nav>
+</div>
+<script id="personal-script">
+(() => {
+  const root = document.getElementById('personal');
+  const main = root.querySelector('main');
+  const nav = root.querySelector('nav');
+  const today = new Date();
+  today.setHours(12, 0, 0, 0);
+  let selected = new Date(today);
+  let month = new Date(today.getFullYear(), today.getMonth(), 1, 12);
+  let page = 'overview';
+  let opened = null;
+
+  const events = [
+    {title:'Утренняя прогулка', start:'09:00', end:'09:30', repeat:'По будням'},
+    {title:'Тренировка', start:'18:30', end:'19:30'},
+  ];
+  const notes = [
+    {title:'Книги', text:'Начать «Лавр» на выходных.'},
+    {title:'Идеи для выходных', text:'Выставка и прогулка в парке.'},
+    {title:'Покупки', text:'Чай, яблоки и батарейки.'},
+  ];
+  const labels = {overview:'Обзор', calendar:'Календарь', notes:'Заметки'};
+  const fullDate = new Intl.DateTimeFormat('ru', {weekday:'long', day:'numeric', month:'long'});
+  const monthName = new Intl.DateTimeFormat('ru', {month:'long', year:'numeric'});
+  const capital = text => text.charAt(0).toUpperCase() + text.slice(1);
+  const hero = (title, subtitle = '') =>
+    `<div class="hero"><h1>${title}</h1>${subtitle ? `<p>${subtitle}</p>` : ''}</div>`;
+
+  function eventList(date) {
+    const visible = events.filter(event => event.repeat
+      ? date.getDay() >= 1 && date.getDay() <= 5
+      : +date === +today);
+    if (!visible.length) return '<p class="empty">Нет событий</p>';
+    return `<div class="events">${visible.map(event => `
+      <button type="button" class="event" data-event="${events.indexOf(event)}">
+        <time datetime="${event.start}">${event.start}</time>
+        <span>${event.title}${event.repeat ? `<small>${event.repeat}</small>` : ''}</span>
+      </button>`).join('')}</div>`;
+  }
+
+  function noteList() {
+    return `<div class="notes">${notes.map((note, index) => `
+      <button type="button" class="note" data-note="${index}">
+        <strong>${note.title}</strong><small>${note.text}</small>
+      </button>`).join('')}</div>`;
+  }
+
+  function calendar() {
+    const offset = (month.getDay() + 6) % 7;
+    const count = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
+    const sameMonth = selected.getMonth() === month.getMonth() && selected.getFullYear() === month.getFullYear();
+    const days = Array.from({length: count}, (_, i) => {
+      const day = i + 1;
+      return `<button type="button" data-day="${day}" aria-pressed="${sameMonth && selected.getDate() === day}">${day}</button>`;
+    }).join('');
+    return `${hero(labels.calendar)}
+      <h2>Выбрать день</h2>
+      <div class="month">
+        <div class="month-controls">
+          <button type="button" data-month="-1" aria-label="Предыдущий месяц">‹</button>
+          <strong>${capital(monthName.format(month))}</strong>
+          <button type="button" data-month="1" aria-label="Следующий месяц">›</button>
+        </div>
+        <div class="days">
+          ${['Пн','Вт','Ср','Чт','Пт','Сб','Вс'].map(day => `<span>${day}</span>`).join('')}
+          ${'<span aria-hidden="true"></span>'.repeat(offset)}${days}
+        </div>
+      </div>
+      <h2>${capital(fullDate.format(selected))}</h2>${eventList(selected)}`;
+  }
+
+  function render(focusSelector) {
+    if (opened) {
+      const details = opened.text ?? `${opened.start}–${opened.end}${opened.repeat ? ` · ${opened.repeat}` : ''}`;
+      main.innerHTML = `<button type="button" class="back" data-back>← ${labels[page]}</button>
+        ${hero(opened.title, page === 'calendar' ? capital(fullDate.format(selected)) : '')}<p class="record">${details}</p>`;
+    } else if (page === 'overview') {
+      main.innerHTML = `${hero('Обзор', capital(fullDate.format(today)))}
+        <h2>Сегодня</h2>${eventList(today)}<h2>Недавние заметки</h2>${noteList()}`;
+    } else {
+      main.innerHTML = page === 'calendar' ? calendar() : `${hero('Заметки')}<h2>Недавние заметки</h2>${noteList()}`;
+    }
+    nav.querySelectorAll('button').forEach(button => {
+      if (button.dataset.page === page) button.setAttribute('aria-current', 'page');
+      else button.removeAttribute('aria-current');
+    });
+    if (focusSelector) main.querySelector(focusSelector)?.focus({preventScroll:true});
+  }
+
+  root.addEventListener('click', event => {
+    const button = event.target.closest('button');
+    if (!button || !root.contains(button)) return;
+    const data = button.dataset;
+    let focusSelector;
+    if (data.page) {
+      page = data.page;
+      opened = null;
+    } else if ('back' in data) {
+      focusSelector = page === 'calendar'
+        ? `[data-event="${events.indexOf(opened)}"]`
+        : `[data-note="${notes.indexOf(opened)}"]`;
+      opened = null;
+    } else if (data.month) {
+      month = new Date(month.getFullYear(), month.getMonth() + Number(data.month), 1, 12);
+      selected = new Date(month);
+      focusSelector = `[data-month="${data.month}"]`;
+    } else if (data.day) {
+      selected = new Date(month.getFullYear(), month.getMonth(), Number(data.day), 12);
+      focusSelector = `[data-day="${data.day}"]`;
+    } else if (data.event !== undefined) {
+      if (page === 'overview') {
+        selected = new Date(today);
+        month = new Date(today.getFullYear(), today.getMonth(), 1, 12);
+      }
+      page = 'calendar';
+      opened = events[Number(data.event)];
+      focusSelector = '[data-back]';
+    } else if (data.note !== undefined) {
+      page = 'notes';
+      opened = notes[Number(data.note)];
+      focusSelector = '[data-back]';
+    }
+    render(focusSelector);
+  });
+  render();
+})();
+</script>
+</body>
+</html>
