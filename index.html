@@ -76,6 +76,23 @@
 #personal nav button { padding: .3rem .1rem; font-size: .82em; }
 @media (max-width: 359px) { #personal .notes { grid-template-columns: minmax(0, 1fr); } }
 @media (forced-colors: active) { #personal .hero { border: 1px solid CanvasText; } #personal .hero h1, #personal .hero p { color: CanvasText; } }
+#personal .section-title { display:flex; align-items:center; justify-content:space-between; gap:.4rem; flex-wrap:wrap; margin:.6rem 0; }
+#personal .section-title h2 { margin:0; }
+#personal .action { border-radius:.6rem; padding:.4rem .7rem; background:var(--tint); color:var(--green); font-weight:700; }
+#personal .primary { background:var(--green); color:var(--paper); }
+#personal form { display:grid; gap:.65rem; padding-top:.7rem; }
+#personal form label { display:grid; gap:.2rem; min-width:0; }
+#personal form .check { display:flex; align-items:center; min-height:44px; gap:.45rem; }
+#personal input:not([type=checkbox]), #personal select, #personal textarea { width:100%; min-width:0; max-width:100%; min-height:44px; font:inherit; color:var(--text); background:var(--paper); border:1px solid var(--line); border-radius:.5rem; padding:.4rem; }
+#personal textarea { min-height:9rem; resize:vertical; }
+#personal .times { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.5rem; }
+#personal [hidden] { display:none !important; }
+#personal .controls { display:flex; flex-wrap:wrap; gap:.45rem; margin-top:.6rem; }
+#personal .record { white-space:pre-wrap; }
+#personal .notice { margin:.4rem 1rem 0; color:var(--secondary); font-size:.875em; }
+#personal .notes.all { grid-template-columns:minmax(0,1fr); }
+#personal .notes small { white-space:pre-line; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; }
+@media (max-width: 23rem) { #personal .times { grid-template-columns:minmax(0,1fr); } }
 </style>
 <style>
 body { margin: 0; background: light-dark(#e6ebdf, #101913); color-scheme: light dark; }
@@ -85,7 +102,8 @@ body { margin: 0; background: light-dark(#e6ebdf, #101913); color-scheme: light 
 </head>
 <body>
 <div id="personal">
-  <header><span class="brand">Личное</span><small>Демонстрационные данные</small></header>
+  <header><span class="brand">Личное</span><small>Локальная версия</small></header>
+  <p class="notice" role="status" hidden></p>
   <main></main>
   <nav aria-label="Разделы">
     <button type="button" data-page="overview">Обзор</button>
@@ -98,124 +116,312 @@ body { margin: 0; background: light-dark(#e6ebdf, #101913); color-scheme: light 
   const root = document.getElementById('personal');
   const main = root.querySelector('main');
   const nav = root.querySelector('nav');
-  const today = new Date();
-  today.setHours(12, 0, 0, 0);
-  let selected = new Date(today);
-  let month = new Date(today.getFullYear(), today.getMonth(), 1, 12);
-  let page = 'overview';
-  let opened = null;
-
-  const events = [
-    {title:'Утренняя прогулка', start:'09:00', end:'09:30', repeat:'По будням'},
-    {title:'Тренировка', start:'18:30', end:'19:30'},
-  ];
-  const notes = [
-    {title:'Книги', text:'Начать «Лавр» на выходных.'},
-    {title:'Идеи для выходных', text:'Выставка и прогулка в парке.'},
-    {title:'Покупки', text:'Чай, яблоки и батарейки.'},
-  ];
+  const notice = root.querySelector('.notice');
+  const storageKey = 'lichnoe:v1';
   const labels = {overview:'Обзор', calendar:'Календарь', notes:'Заметки'};
-  const fullDate = new Intl.DateTimeFormat('ru', {weekday:'long', day:'numeric', month:'long'});
-  const monthName = new Intl.DateTimeFormat('ru', {month:'long', year:'numeric'});
-  const capital = text => text.charAt(0).toUpperCase() + text.slice(1);
-  const hero = (title, subtitle = '') =>
-    `<div class="hero"><h1>${title}</h1>${subtitle ? `<p>${subtitle}</p>` : ''}</div>`;
+  const repeats = {none:'Не повторяется', daily:'Каждый день', weekdays:'По будням', weekly:'Каждую неделю', monthly:'Каждый месяц', yearly:'Каждый год'};
+  const fullDate = new Intl.DateTimeFormat('ru', {weekday:'long', day:'numeric', month:'long', timeZone:'UTC'});
+  const monthName = new Intl.DateTimeFormat('ru', {month:'long', year:'numeric', timeZone:'UTC'});
+  const dayMs = 86400000;
+  const localNow = new Date();
+  const today = key(new Date(Date.UTC(localNow.getFullYear(), localNow.getMonth(), localNow.getDate())));
+  let selected = today;
+  let month = today.slice(0, 7);
+  let page = 'overview';
+  let view = null;
+  let data = {events:[], notes:[]};
+  try {
+    const saved = localStorage.getItem(storageKey);
+    if (saved) data = JSON.parse(saved);
+    else if (root.hasAttribute('data-preview')) {
+      data = {
+        events:[{id:'walk', title:'Утренняя прогулка', date:today, start:'09:00', end:'09:30', repeat:'weekdays', ending:'never', exceptions:{}},
+                {id:'sport', title:'Тренировка', date:today, start:'18:30', end:'19:30', repeat:'none', ending:'never', exceptions:{}}],
+        notes:[{id:'books', title:'Книги', text:'Начать «Лавр» на выходных.'}, {id:'plans', title:'Идеи для выходных', text:'Выставка и прогулка в парке.'}, {id:'shop', title:'Покупки', text:'Чай, яблоки и батарейки.'}]
+      };
+    }
+  } catch {
+    showNotice('Хранилище браузера недоступно. Записи могут исчезнуть при закрытии.');
+  }
 
+  function key(date) { return date.toISOString().slice(0, 10); }
+  function asDate(value) { return new Date(value + 'T00:00:00Z'); }
+  function capital(text) { return text.charAt(0).toUpperCase() + text.slice(1); }
+  function escape(text) {
+    return String(text ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'}[char]));
+  }
+  function showNotice(text) { notice.textContent = text; notice.hidden = !text; }
+  function save() {
+    try { localStorage.setItem(storageKey, JSON.stringify(data)); showNotice(''); }
+    catch { showNotice('Запись открыта в панели, но браузер не сохранил её после закрытия.'); }
+  }
+  function weekday(date) { return date.getUTCDay() >= 1 && date.getUTCDay() <= 5; }
+  function ordinal(event, date) {
+    if (date < event.date) return 0;
+    const start = asDate(event.date);
+    const day = asDate(date);
+    const distance = (day - start) / dayMs;
+    if (event.repeat === 'none') return distance === 0 ? 1 : 0;
+    if (event.repeat === 'daily') return distance + 1;
+    if (event.repeat === 'weekly') return distance % 7 === 0 ? distance / 7 + 1 : 0;
+    if (event.repeat === 'weekdays') {
+      if (!weekday(day)) return 0;
+      const length = distance + 1;
+      let count = Math.floor(length / 7) * 5;
+      for (let i = 0; i < length % 7; i++) {
+        if (weekday(new Date(+start + i * dayMs))) count++;
+      }
+      return count;
+    }
+    if (start.getUTCDate() !== day.getUTCDate()) return 0;
+    if (event.repeat === 'yearly' && start.getUTCMonth() !== day.getUTCMonth()) return 0;
+    const months = (day.getUTCFullYear() - start.getUTCFullYear()) * 12 + day.getUTCMonth() - start.getUTCMonth();
+    const step = event.repeat === 'yearly' ? 12 : 1;
+    let count = 0;
+    for (let i = 0; i <= months; i += step) {
+      if (new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + i, start.getUTCDate())).getUTCDate() === start.getUTCDate()) count++;
+    }
+    return count;
+  }
+  function occurs(event, date) {
+    if (event.stopBefore && date >= event.stopBefore) return false;
+    if (event.ending === 'date' && date > event.until) return false;
+    const position = ordinal(event, date);
+    return position > 0 && (event.ending !== 'count' || position <= event.count);
+  }
+  function occurrences(date) {
+    const rows = [];
+    for (const event of data.events) {
+      if (occurs(event, date) && !Object.hasOwn(event.exceptions, date)) rows.push({id:event.id, slot:date, entry:event});
+      for (const [slot, entry] of Object.entries(event.exceptions)) {
+        if (entry?.date === date && occurs(event, slot)) rows.push({id:event.id, slot, entry});
+      }
+    }
+    return rows.sort((a, b) => (a.entry.allDay ? '' : a.entry.start).localeCompare(b.entry.allDay ? '' : b.entry.start));
+  }
+  function hero(title, subtitle = '') {
+    return `<div class="hero"><h1>${escape(title)}</h1>${subtitle ? `<p>${escape(subtitle)}</p>` : ''}</div>`;
+  }
   function eventList(date) {
-    const visible = events.filter(event => event.repeat
-      ? date.getDay() >= 1 && date.getDay() <= 5
-      : +date === +today);
-    if (!visible.length) return '<p class="empty">Нет событий</p>';
-    return `<div class="events">${visible.map(event => `
-      <button type="button" class="event" data-event="${events.indexOf(event)}">
-        <time datetime="${event.start}">${event.start}</time>
-        <span>${event.title}${event.repeat ? `<small>${event.repeat}</small>` : ''}</span>
-      </button>`).join('')}</div>`;
+    const rows = occurrences(date);
+    if (!rows.length) return '<p class="empty">Нет событий</p>';
+    return `<div class="events">${rows.map(({id, slot, entry}) => {
+      const series = data.events.find(item => item.id === id);
+      const time = entry.allDay ? 'Весь день' : entry.start;
+      return `<button type="button" class="event" data-event="${escape(id)}" data-slot="${slot}"><time>${escape(time)}</time>
+        <span>${escape(entry.title)}${series.repeat === 'none' ? '' : `<small>${repeats[series.repeat]}</small>`}</span></button>`;
+    }).join('')}</div>`;
   }
-
-  function noteList() {
-    return `<div class="notes">${notes.map((note, index) => `
-      <button type="button" class="note" data-note="${index}">
-        <strong>${note.title}</strong><small>${note.text}</small>
-      </button>`).join('')}</div>`;
+  function noteList(overview) {
+    const notes = overview ? data.notes.slice(0, 3) : data.notes;
+    return notes.length ? `<div class="notes${overview ? '' : ' all'}">${notes.map(note => `
+      <button type="button" class="note" data-note="${escape(note.id)}"><strong>${escape(note.title)}</strong><small>${escape(note.text)}</small></button>`).join('')}</div>`
+      : '<p class="empty">Нет заметок</p>';
   }
-
+  function sectionTitle(title, action, label) {
+    return `<div class="section-title"><h2>${title}</h2><button type="button" class="action" data-action="${action}">${label}</button></div>`;
+  }
   function calendar() {
-    const offset = (month.getDay() + 6) % 7;
-    const count = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
-    const sameMonth = selected.getMonth() === month.getMonth() && selected.getFullYear() === month.getFullYear();
-    const days = Array.from({length: count}, (_, i) => {
-      const day = i + 1;
-      return `<button type="button" data-day="${day}" aria-pressed="${sameMonth && selected.getDate() === day}">${day}</button>`;
+    const first = asDate(month + '-01');
+    const offset = (first.getUTCDay() + 6) % 7;
+    const count = new Date(Date.UTC(first.getUTCFullYear(), first.getUTCMonth() + 1, 0)).getUTCDate();
+    const dates = Array.from({length:count}, (_, index) => {
+      const date = month + '-' + String(index + 1).padStart(2, '0');
+      return `<button type="button" data-day="${date}" aria-pressed="${selected === date}">${index + 1}</button>`;
     }).join('');
-    return `${hero(labels.calendar)}
-      <h2>Выбрать день</h2>
-      <div class="month">
-        <div class="month-controls">
-          <button type="button" data-month="-1" aria-label="Предыдущий месяц">‹</button>
-          <strong>${capital(monthName.format(month))}</strong>
-          <button type="button" data-month="1" aria-label="Следующий месяц">›</button>
-        </div>
-        <div class="days">
-          ${['Пн','Вт','Ср','Чт','Пт','Сб','Вс'].map(day => `<span>${day}</span>`).join('')}
-          ${'<span aria-hidden="true"></span>'.repeat(offset)}${days}
-        </div>
-      </div>
-      <h2>${capital(fullDate.format(selected))}</h2>${eventList(selected)}`;
+    return `${hero('Календарь')}<h2>Выбрать день</h2><div class="month"><div class="month-controls">
+      <button type="button" data-month="-1" aria-label="Предыдущий месяц">‹</button><strong>${capital(monthName.format(first))}</strong>
+      <button type="button" data-month="1" aria-label="Следующий месяц">›</button></div>
+      <div class="days">${['Пн','Вт','Ср','Чт','Пт','Сб','Вс'].map(day => `<span>${day}</span>`).join('')}
+      ${'<span aria-hidden="true"></span>'.repeat(offset)}${dates}</div></div>
+      ${sectionTitle(capital(fullDate.format(asDate(selected))), 'new-event', '+ Событие')}${eventList(selected)}`;
   }
-
-  function render(focusSelector) {
-    if (opened) {
-      const details = opened.text ?? `${opened.start}–${opened.end}${opened.repeat ? ` · ${opened.repeat}` : ''}`;
-      main.innerHTML = `<button type="button" class="back" data-back>← ${labels[page]}</button>
-        ${hero(opened.title, page === 'calendar' ? capital(fullDate.format(selected)) : '')}<p class="record">${details}</p>`;
+  function optionList(values, value) {
+    return Object.entries(values).map(([id,label]) => `<option value="${id}"${id === value ? ' selected' : ''}>${label}</option>`).join('');
+  }
+  function scopeOptions() {
+    return {single:'Только это событие', following:'Это и следующие', series:'Вся серия'};
+  }
+  function editForm() {
+    const note = page === 'notes';
+    const original = view.record;
+    const value = note ? original ?? {} : view.entry ?? {date:selected, start:'09:00', end:'10:00', repeat:'none', ending:'never'};
+    const recurring = !note && original && original.repeat !== 'none';
+    return `${hero((original ? 'Редактировать ' : note ? 'Новая ' : 'Новое ') + (note ? original ? 'заметку' : 'заметка' : 'событие'))}
+      <form data-form="edit">
+        ${recurring ? `<label>Применить к<select name="scope">${optionList(scopeOptions(), 'single')}</select></label>` : ''}
+        <label>Название<input name="title" required maxlength="200" value="${escape(value.title)}"></label>
+        ${note ? `<label>Текст<textarea name="text" rows="6">${escape(value.text)}</textarea></label>` : `
+          <label>Дата<input type="date" name="date" required value="${escape(value.date)}"></label>
+          <label class="check"><input type="checkbox" name="allDay"${value.allDay ? ' checked' : ''}> Весь день</label>
+          <div class="times"><label>Начало<input name="start" type="time" value="${escape(value.start || '09:00')}"></label>
+          <label>Окончание<input name="end" type="time" value="${escape(value.end || '10:00')}"></label></div>
+          <label data-repeat>Повтор<select name="repeat">${optionList(repeats, original?.repeat ?? value.repeat)}</select></label>
+          <label data-ending>Окончание серии<select name="ending">${optionList({never:'Бессрочно',date:'До даты',count:'После заданного числа повторений'}, original?.ending ?? value.ending)}</select></label>
+          <label data-until>Последняя дата включительно<input name="until" type="date" value="${escape(original?.until ?? value.until)}"></label>
+          <label data-count>Число событий в серии<input name="count" type="number" min="1" max="9999" value="${escape(original?.count ?? value.count ?? 10)}"></label>`}
+        <div class="controls"><button type="submit" class="action primary">Сохранить</button><button type="button" data-action="cancel">Отмена</button></div>
+      </form>`;
+  }
+  function fields(form) {
+    if (page === 'notes') return;
+    const get = name => form.elements.namedItem(name);
+    const single = get('scope')?.value === 'single';
+    const allDay = get('allDay').checked;
+    const repeatsEnabled = !single && get('repeat').value !== 'none';
+    const ending = get('ending').value;
+    form.querySelector('.times').hidden = allDay;
+    get('start').required = get('end').required = !allDay;
+    form.querySelector('[data-repeat]').hidden = single;
+    form.querySelector('[data-ending]').hidden = !repeatsEnabled;
+    form.querySelector('[data-until]').hidden = !repeatsEnabled || ending !== 'date';
+    form.querySelector('[data-count]').hidden = !repeatsEnabled || ending !== 'count';
+    get('until').required = repeatsEnabled && ending === 'date';
+    get('count').required = repeatsEnabled && ending === 'count';
+    get('count').disabled = !get('count').required;
+    get('until').disabled = !get('until').required;
+  }
+  function render() {
+    if (view?.type === 'edit') {
+      main.innerHTML = editForm();
+      fields(main.querySelector('form'));
+    } else if (view?.type === 'delete') {
+      const series = page === 'calendar' && view.record.repeat !== 'none';
+      main.innerHTML = `${hero('Удалить ' + (page === 'notes' ? 'заметку' : 'событие') + '?')}
+        <p class="record">${escape(view.entry?.title ?? view.record.title)}</p><form data-form="delete">
+        ${series ? `<label>Удалить<select name="scope">${optionList(scopeOptions(), 'single')}</select></label>` : ''}
+        <div class="controls"><button type="submit" class="action primary">Удалить</button><button type="button" data-action="cancel">Отмена</button></div></form>`;
+    } else if (view?.type === 'record') {
+      const item = view.entry ?? view.record;
+      const detail = page === 'notes' ? item.text : (item.allDay ? 'Весь день' : item.start + '–' + item.end)
+        + (view.record.repeat === 'none' ? '' : ' · ' + repeats[view.record.repeat]);
+      main.innerHTML = `<button type="button" class="back" data-action="back">← ${labels[page]}</button>
+        ${hero(item.title, page === 'calendar' ? capital(fullDate.format(asDate(item.date))) : '')}
+        <p class="record">${escape(detail)}</p><div class="controls"><button type="button" class="action" data-action="edit">Изменить</button>
+        <button type="button" data-action="delete">Удалить</button></div>`;
     } else if (page === 'overview') {
-      main.innerHTML = `${hero('Обзор', capital(fullDate.format(today)))}
-        <h2>Сегодня</h2>${eventList(today)}<h2>Недавние заметки</h2>${noteList()}`;
+      main.innerHTML = `${hero('Обзор', capital(fullDate.format(asDate(today))))}<h2>Сегодня</h2>${eventList(today)}
+        <h2>Недавние заметки</h2>${noteList(true)}`;
     } else {
-      main.innerHTML = page === 'calendar' ? calendar() : `${hero('Заметки')}<h2>Недавние заметки</h2>${noteList()}`;
+      main.innerHTML = page === 'calendar' ? calendar() : `${hero('Заметки')}${sectionTitle('Все заметки', 'new-note', '+ Заметка')}${noteList(false)}`;
     }
     nav.querySelectorAll('button').forEach(button => {
       if (button.dataset.page === page) button.setAttribute('aria-current', 'page');
       else button.removeAttribute('aria-current');
     });
-    if (focusSelector) main.querySelector(focusSelector)?.focus({preventScroll:true});
   }
-
+  function finish(date) {
+    if (date) { selected = date; month = date.slice(0, 7); }
+    view = null;
+    save();
+    render();
+  }
+  main.addEventListener('input', event => {
+    if (event.target instanceof HTMLInputElement) event.target.setCustomValidity('');
+  });
+  main.addEventListener('change', event => {
+    const form = event.target.form;
+    if (form?.dataset.form !== 'edit' || page !== 'calendar') return;
+    if (event.target.name === 'scope') {
+      const scope = event.target.value;
+      form.elements.date.value = scope === 'series' ? view.record.date : scope === 'following' ? view.slot : view.entry.date;
+      if (view.record.ending === 'count') {
+        form.elements.count.value = scope === 'following'
+          ? view.record.count - ordinal(view.record, view.slot) + 1
+          : view.record.count;
+      }
+    }
+    for (const name of ['end','until']) form.elements.namedItem(name).setCustomValidity('');
+    fields(form);
+  });
+  main.addEventListener('submit', event => {
+    event.preventDefault();
+    const form = event.target;
+    const values = new FormData(form);
+    const get = name => String(values.get(name) ?? '');
+    const original = view.record;
+    const scope = get('scope');
+    if (form.dataset.form === 'delete') {
+      if (page === 'notes') data.notes = data.notes.filter(item => item.id !== original.id);
+      else if (scope === 'single') original.exceptions[view.slot] = null;
+      else if (scope === 'following') original.stopBefore = view.slot;
+      else data.events = data.events.filter(item => item.id !== original.id);
+      finish();
+      return;
+    }
+    const title = get('title').trim();
+    if (!title) {
+      form.elements.title.setCustomValidity('Введите название.');
+      form.elements.title.reportValidity();
+      return;
+    }
+    if (page === 'notes') {
+      data.notes = [{id:original?.id ?? crypto.randomUUID(), title, text:get('text')}, ...data.notes.filter(item => item.id !== original?.id)];
+      finish();
+      return;
+    }
+    const allDay = values.has('allDay');
+    const entry = {title, date:get('date'), allDay, start:allDay ? '' : get('start'), end:allDay ? '' : get('end')};
+    if (!allDay && entry.end <= entry.start) {
+      form.elements.end.setCustomValidity('Окончание должно быть позже начала.');
+      form.elements.end.reportValidity();
+      return;
+    }
+    if (scope === 'single') {
+      original.exceptions[view.slot] = entry;
+    } else {
+      const repeat = get('repeat');
+      const ending = repeat === 'none' ? 'never' : get('ending');
+      if (ending === 'date' && get('until') < entry.date) {
+        form.elements.until.setCustomValidity('Дата окончания серии должна быть не раньше начала.');
+        form.elements.until.reportValidity();
+        return;
+      }
+      const updated = {...entry, id:original?.id ?? crypto.randomUUID(), repeat, ending, until:get('until'), count:Number(get('count')), exceptions:{}};
+      if (original?.stopBefore && repeat !== 'none') updated.stopBefore = original.stopBefore;
+      if (scope === 'following') {
+        updated.id = crypto.randomUUID();
+        for (const [slot, exception] of Object.entries(original.exceptions)) {
+          if (slot >= view.slot && occurs(updated, slot)) updated.exceptions[slot] = exception;
+        }
+        original.stopBefore = view.slot;
+        data.events.push(updated);
+      } else if (original) {
+        for (const [slot, exception] of Object.entries(original.exceptions)) {
+          if (repeat !== 'none' && occurs(updated, slot)) updated.exceptions[slot] = exception;
+        }
+        data.events[data.events.indexOf(original)] = updated;
+      } else {
+        data.events.push(updated);
+      }
+    }
+    finish(entry.date);
+  });
   root.addEventListener('click', event => {
     const button = event.target.closest('button');
-    if (!button || !root.contains(button)) return;
-    const data = button.dataset;
-    let focusSelector;
-    if (data.page) {
-      page = data.page;
-      opened = null;
-    } else if ('back' in data) {
-      focusSelector = page === 'calendar'
-        ? `[data-event="${events.indexOf(opened)}"]`
-        : `[data-note="${notes.indexOf(opened)}"]`;
-      opened = null;
-    } else if (data.month) {
-      month = new Date(month.getFullYear(), month.getMonth() + Number(data.month), 1, 12);
-      selected = new Date(month);
-      focusSelector = `[data-month="${data.month}"]`;
-    } else if (data.day) {
-      selected = new Date(month.getFullYear(), month.getMonth(), Number(data.day), 12);
-      focusSelector = `[data-day="${data.day}"]`;
-    } else if (data.event !== undefined) {
-      if (page === 'overview') {
-        selected = new Date(today);
-        month = new Date(today.getFullYear(), today.getMonth(), 1, 12);
-      }
-      page = 'calendar';
-      opened = events[Number(data.event)];
-      focusSelector = '[data-back]';
-    } else if (data.note !== undefined) {
-      page = 'notes';
-      opened = notes[Number(data.note)];
-      focusSelector = '[data-back]';
-    }
-    render(focusSelector);
+    if (!button || !root.contains(button) || button.type === 'submit') return;
+    const {page:destination, month:direction, day, event:id, slot, note, action} = button.dataset;
+    if (destination) { page = destination; view = null; }
+    else if (direction) {
+      const first = asDate(month + '-01');
+      selected = key(new Date(Date.UTC(first.getUTCFullYear(), first.getUTCMonth() + Number(direction), 1)));
+      month = selected.slice(0, 7);
+    } else if (day) selected = day;
+    else if (id) {
+      const record = data.events.find(item => item.id === id);
+      const entry = record.exceptions[slot] ?? {...record, date:slot};
+      page = 'calendar'; selected = entry.date; month = selected.slice(0, 7);
+      view = {type:'record', record, entry, slot};
+    } else if (note) {
+      page = 'notes'; view = {type:'record', record:data.notes.find(item => item.id === note)};
+    } else if (action === 'new-event' || action === 'new-note') view = {type:'edit'};
+    else if (action === 'edit' || action === 'delete') view.type = action;
+    else if (action === 'cancel') view = view.record ? {...view, type:'record'} : null;
+    else if (action === 'back') view = null;
+    else return;
+    render();
+    if (day) main.querySelector('[data-day="' + day + '"]')?.focus({preventScroll:true});
+    if (direction) main.querySelector('[data-month="' + direction + '"]')?.focus({preventScroll:true});
   });
   render();
 })();
