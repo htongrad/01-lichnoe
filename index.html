@@ -119,7 +119,7 @@ body { margin: 0; background: light-dark(#e6ebdf, #101913); color-scheme: light 
 </head>
 <body>
 <div id="personal">
-  <header><span class="brand">Личное</span><small>Локальная версия</small></header>
+  <header><span class="brand">Личное</span><a class="back" href="/signout-with-chatgpt" target="_top">Выйти</a></header>
   <p class="notice" role="status" hidden></p>
   <main></main>
   <div class="bottom">
@@ -138,7 +138,6 @@ body { margin: 0; background: light-dark(#e6ebdf, #101913); color-scheme: light 
   const nav = root.querySelector('nav');
   const create = root.querySelector('.create');
   const notice = root.querySelector('.notice');
-  const storageKey = 'lichnoe:v1';
   const labels = {overview:'Обзор', calendar:'Календарь', notes:'Заметки'};
   const repeats = {none:'Не повторяется', daily:'Каждый день', weekdays:'По будням', weekly:'Каждую неделю', monthly:'Каждый месяц', yearly:'Каждый год'};
   const fullDate = new Intl.DateTimeFormat('ru', {weekday:'long', day:'numeric', month:'long', timeZone:'UTC'});
@@ -151,18 +150,23 @@ body { margin: 0; background: light-dark(#e6ebdf, #101913); color-scheme: light 
   let page = 'overview';
   let view = null;
   let data = {events:[], notes:[]};
-  try {
-    const saved = localStorage.getItem(storageKey);
-    if (saved) data = JSON.parse(saved);
-    else if (root.hasAttribute('data-preview')) {
-      data = {
-        events:[{id:'walk', title:'Утренняя прогулка', date:today, start:'09:00', end:'09:30', repeat:'weekdays', ending:'never', exceptions:{}},
-                {id:'sport', title:'Тренировка', date:today, start:'18:30', end:'19:30', repeat:'none', ending:'never', exceptions:{}}],
-        notes:[{id:'books', title:'Книги', text:'Начать «Лавр» на выходных.'}, {id:'plans', title:'Идеи для выходных', text:'Выставка и прогулка в парке.'}, {id:'shop', title:'Покупки', text:'Чай, яблоки и батарейки.'}]
-      };
+  let revision = 0;
+  let saving = false;
+  let pending = false;
+  let blocked = false;
+
+  async function load() {
+    main.innerHTML = '<p class="empty">Загрузка записей…</p>';
+    nav.hidden = true;
+    try {
+      const response = await fetch('/api/records', {cache:'no-store'});
+      if (!response.ok) throw new Error();
+      ({data, revision} = await response.json());
+      nav.hidden = false;
+      render();
+    } catch {
+      main.innerHTML = '<p class="empty">Не удалось загрузить записи.</p><button type="button" class="action" data-action="reload">Повторить</button>';
     }
-  } catch {
-    showNotice('Хранилище браузера недоступно. Записи могут исчезнуть при закрытии.');
   }
 
   function key(date) { return date.toISOString().slice(0, 10); }
@@ -172,9 +176,37 @@ body { margin: 0; background: light-dark(#e6ebdf, #101913); color-scheme: light 
     return String(text ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'}[char]));
   }
   function showNotice(text) { notice.textContent = text; notice.hidden = !text; }
-  function save() {
-    try { localStorage.setItem(storageKey, JSON.stringify(data)); showNotice(''); }
-    catch { showNotice('Запись открыта в панели, но браузер не сохранил её после закрытия.'); }
+  async function save() {
+    if (saving || blocked) return;
+    saving = true;
+    pending = true;
+    showNotice('Сохраняю…');
+    try {
+      const response = await fetch('/api/records', {
+        method:'PUT',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({data, revision})
+      });
+      if (response.status === 409) {
+        blocked = true;
+        showNotice('Записи изменились в другом окне. Обновите панель, чтобы загрузить актуальную версию. Изменение в этом окне не сохранено.');
+        return;
+      }
+      if (!response.ok) throw new Error();
+      ({revision} = await response.json());
+      pending = false;
+      showNotice('Сохранено');
+    } catch {
+      showNotice('Изменение пока не сохранено.');
+      const retry = document.createElement('button');
+      retry.type = 'button';
+      retry.className = 'action';
+      retry.dataset.action = 'retry';
+      retry.textContent = 'Повторить сохранение';
+      notice.append(' ', retry);
+    } finally {
+      saving = false;
+    }
   }
   function weekday(date) { return date.getUTCDay() >= 1 && date.getUTCDay() <= 5; }
   function ordinal(event, date) {
@@ -357,6 +389,7 @@ body { margin: 0; background: light-dark(#e6ebdf, #101913); color-scheme: light 
   });
   main.addEventListener('submit', event => {
     event.preventDefault();
+    if (pending || saving || blocked) return;
     const form = event.target;
     const values = new FormData(form);
     const get = name => String(values.get(name) ?? '');
@@ -422,6 +455,9 @@ body { margin: 0; background: light-dark(#e6ebdf, #101913); color-scheme: light 
     const button = event.target.closest('button');
     if (!button || !root.contains(button) || button.type === 'submit') return;
     const {page:destination, month:direction, day, event:id, slot, note, action} = button.dataset;
+    if (action === 'reload') { load(); return; }
+    if (action === 'retry') { save(); return; }
+    if ((pending || saving || blocked) && ['new-event','new-note','edit','delete'].includes(action)) return;
     if (destination) { page = destination; view = null; }
     else if (direction) {
       const first = asDate(month + '-01');
@@ -445,7 +481,7 @@ body { margin: 0; background: light-dark(#e6ebdf, #101913); color-scheme: light 
     if (day) main.querySelector('[data-day="' + day + '"]')?.focus({preventScroll:true});
     if (direction) main.querySelector('[data-month="' + direction + '"]')?.focus({preventScroll:true});
   });
-  render();
+  load();
 })();
 </script>
 </body>
