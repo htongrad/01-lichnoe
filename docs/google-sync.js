@@ -8,6 +8,8 @@
   const backupName = 'Личное — резервная копия.json';
   let token;
   let expiresAt = 0;
+  let expirationTimer;
+  let failed = false;
   let client;
   let preparation;
   let retryOnOnline = false;
@@ -17,6 +19,8 @@
   let status = '';
   let settings = {};
   try { settings = JSON.parse(localStorage.getItem(stateKey)) || {}; } catch {}
+  // Earlier versions did not record whether local edits had reached Google.
+  if (settings.backupId && !Object.hasOwn(settings, 'pending')) settings.pending = true;
   const persist = () => localStorage.setItem(stateKey, JSON.stringify(settings));
   const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const ready = () => Boolean(token && Date.now() < expiresAt);
@@ -57,9 +61,10 @@
   async function run(task) {
     if (busy) return;
     busy = true;
+    failed = false;
     api.refresh();
     try { status = await task(); }
-    catch (error) { status = error.message || 'Операция не завершена.'; }
+    catch (error) { failed = true; status = error.message || 'Операция не завершена.'; }
     finally { busy = false; api.refresh(); }
   }
   async function prepare(clientId) {
@@ -74,6 +79,8 @@
         }
         token = result.access_token;
         expiresAt = Date.now() + Number(result.expires_in) * 1000 - 30000;
+        clearTimeout(expirationTimer);
+        expirationTimer = setTimeout(() => { if (!ready()) api.refresh(); }, Math.max(0, expiresAt - Date.now()));
         run(async () => {
           try {
             const profile = await (await request('https://openidconnect.googleapis.com/v1/userinfo')).json();
@@ -122,6 +129,8 @@
     if (folder.name?.trim() !== '01 ЛИЧНОЕ') throw new Error('Выберите папку с названием «01 ЛИЧНОЕ».');
     if (settings.folder !== folder.id) {
       settings.autoSync = false;
+      settings.pending = true;
+      delete settings.lastSync;
       delete settings.backupId;
       delete settings.backupVersion;
     }
@@ -241,6 +250,9 @@
     retryOnOnline = !navigator.onLine;
     if (retryOnOnline) return 'Нет интернета. Панель повторит синхронизацию после подключения.';
     const records = structuredClone(api.records());
+    const change = settings.change;
+    settings.pending = true;
+    persist();
     let copied = false;
     try {
       await backup(records);
@@ -252,8 +264,10 @@
       throw error;
     }
     settings.autoSync = true;
+    settings.lastSync = new Date().toISOString();
+    settings.pending = change !== settings.change;
     persist();
-    if (JSON.stringify(records) !== JSON.stringify(api.records())) schedule();
+    if (settings.pending) schedule();
     return 'Копия сохранена. Календарь обновлён.';
   }
   function schedule() {
@@ -267,15 +281,45 @@
   window.lichnoeGoogle = {
     init(handlers) {
       api = handlers;
+      if (settings.pending && autoEnabled()) warmUp();
+      document.addEventListener('visibilitychange', () => { if (!document.hidden) api.refresh(); });
+      window.addEventListener('offline', () => api.refresh());
       window.addEventListener('online', () => {
         if ((autoEnabled() || retryOnOnline) && ready()) {
           if (busy) schedule();
           else run(sync);
-        }
+        } else if (settings.pending && autoEnabled()) warmUp();
+        api.refresh();
       });
     },
     open() { warmUp(); },
-    schedule,
+    changed() {
+      if (!settings.clientId) return;
+      settings.change = crypto.randomUUID();
+      settings.pending = true;
+      try { persist(); }
+      catch { failed = true; status = 'Браузер не сохранил статус синхронизации.'; api.refresh(); return; }
+      if (autoEnabled()) warmUp();
+      schedule();
+      api.refresh();
+    },
+    overview() {
+      if (!settings.account || !settings.folder) return '';
+      const last = settings.lastSync ? 'Последняя синхронизация: ' +
+        new Intl.DateTimeFormat('ru', {dateStyle:'short', timeStyle:'short'}).format(new Date(settings.lastSync)) + '.' : '';
+      if (!settings.pending && !busy && !connecting && !failed) {
+        return last ? '<p>' + esc(last) + '</p>' : '';
+      }
+      let message = 'Есть изменения для отправки.';
+      let action = '';
+      if (busy || connecting) message = 'Подключение или синхронизация…';
+      else if (!navigator.onLine) message = 'Есть изменения для отправки. Панель ждёт интернет.';
+      else if (!autoEnabled()) action = '<button type="button" class="action" data-action="google">Открыть синхронизацию</button>';
+      else if (!ready()) action = '<button type="button" class="action" data-google="connect">Подключить Google</button>';
+      else if (failed || retryOnOnline) action = '<button type="button" class="action" data-google="sync">Повторить</button>';
+      if (failed && status) message += ' ' + status;
+      return '<p>' + esc(message) + '</p>' + action;
+    },
     clearRestore() { restoreFile = null; },
     restored() {
       if (!restoreFile) return;
@@ -364,6 +408,8 @@
       else if (action === 'disconnect' || action === 'reset') {
         token = null; client = null; clearTimeout(timer);
         if (action === 'reset') { settings = {}; persist(); }
+        failed = false;
+        clearTimeout(expirationTimer);
         status = 'Google отключён.';
         api.refresh();
       }

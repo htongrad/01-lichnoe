@@ -1,8 +1,8 @@
 const prefix = 'lichnoe-shell-';
-const cacheName = prefix + 'v4';
+const cacheName = prefix + 'v5';
 const home = new URL('./', self.registration.scope);
 const shell = new URL('index.html', home);
-const syncScript = new URL('google-sync.js?v=auto1', home);
+const syncScript = new URL('google-sync.js?v=auto2', home);
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(cacheName).then(cache => cache.addAll([shell.href, syncScript.href])));
 });
