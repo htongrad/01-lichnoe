@@ -75,6 +75,7 @@
       callback: result => {
         connecting = false;
         if (result.error || !google.accounts.oauth2.hasGrantedAllScopes(result, 'openid', DRIVE_SCOPE, CAL_SCOPE)) {
+          failed = true;
           status = 'Для синхронизации разрешите доступ к Диску и Календарю.'; api.refresh(); return;
         }
         token = result.access_token;
@@ -94,12 +95,13 @@
             token = null;
             throw error;
           }
-          if (autoEnabled()) return sync();
+          if (autoEnabled() && settings.pending !== false) return sync();
+          if (autoEnabled()) return 'Google подключён. Нет изменений для отправки.';
           return settings.folder ? 'Google подключён. Нажмите «Синхронизировать» для первого запуска.'
             : 'Google подключён. Выберите папку «01 ЛИЧНОЕ».';
         });
       },
-      error_callback:() => { connecting = false; status = 'Окно Google закрыто или заблокировано.'; api.refresh(); }
+      error_callback:() => { connecting = false; failed = true; status = 'Окно Google закрыто или заблокировано.'; api.refresh(); }
     });
   }
   function warmUp() {
@@ -148,6 +150,9 @@
   }
   async function backup(records) {
     const existing = await findBackup();
+    if (!existing && settings.backupId) {
+      throw new Error('Сохранённая копия недоступна. Проверьте папку и доступ к файлу на Диске.');
+    }
     const file = {format:'lichnoe-backup',version:1,exportedAt:new Date().toISOString(),data:records};
     if (existing && (settings.backupId !== existing.id || settings.backupVersion !== existing.version)) {
       throw new Error('На Диске есть копия, которой этот браузер не управлял. Сначала восстановите её, чтобы сохранить записи.');
@@ -246,7 +251,14 @@
     persist();
   }
   const autoEnabled = () => Boolean(settings.folder && (settings.autoSync ?? settings.backupId));
-  async function sync() {
+  function sync() {
+    if (!navigator.locks) return sendChanges();
+    return navigator.locks.request(stateKey, {ifAvailable:true}, lock => {
+      if (!lock) throw new Error('Синхронизация идёт в другом окне. Повторите после её завершения.');
+      return sendChanges();
+    });
+  }
+  async function sendChanges() {
     retryOnOnline = !navigator.onLine;
     if (retryOnOnline) return 'Нет интернета. Панель повторит синхронизацию после подключения.';
     const records = structuredClone(api.records());
@@ -285,7 +297,7 @@
       document.addEventListener('visibilitychange', () => { if (!document.hidden) api.refresh(); });
       window.addEventListener('offline', () => api.refresh());
       window.addEventListener('online', () => {
-        if ((autoEnabled() || retryOnOnline) && ready()) {
+        if ((settings.pending || retryOnOnline) && (autoEnabled() || retryOnOnline) && ready()) {
           if (busy) schedule();
           else run(sync);
         } else if (settings.pending && autoEnabled()) warmUp();
@@ -350,7 +362,7 @@
       const fields = new FormData(form);
       const copied = name => String(fields.get(name) ?? '')
         .replace(/[\u200B-\u200D\u2060\uFEFF]/gu, '').trim();
-      const clientId = copied('clientId');
+      const clientId = copied('clientId').replace(/^https?:\/\//i, '');
       const projectNumber = copied('projectNumber').replace(/\s/gu, '');
       const apiKey = copied('apiKey');
       const invalid = [
@@ -387,7 +399,7 @@
           connecting = true;
           api.refresh();
           try { client.requestAccessToken({prompt:''}); }
-          catch { connecting = false; status = 'Не удалось открыть окно Google.'; api.refresh(); }
+          catch { connecting = false; failed = true; status = 'Не удалось открыть окно Google.'; api.refresh(); }
         }
         else run(async () => {
           const loading = warmUp();

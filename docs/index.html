@@ -60,11 +60,11 @@
 #personal .event, #personal .note { display: block; text-align: start; width: 100%; padding: .55rem 0; }
 #personal .event { display: grid; grid-template-columns: minmax(3.25em, max-content) minmax(0, 1fr); gap: .45rem; align-items: start; }
 #personal .event + .event { border-top: 1px solid var(--line); }
-#personal .event time { font-variant-numeric: tabular-nums; color: var(--green); }
+#personal .event-time { font-variant-numeric: tabular-nums; color: var(--green); }
 #personal .event small, #personal .note small { display: block; }
 #personal .notes { display: grid; gap: .4rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 #personal .note { border: 1px solid var(--line); border-radius: .65rem; background: var(--paper); padding: .55rem .65rem; }
-#personal .note:first-child { grid-column: 1 / -1; background: var(--tint); }
+#personal .note:first-child { grid-column: 1 / -1; }
 #personal .month { padding: .3rem; }
 #personal .month-controls { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; align-items: center; text-align: center; }
 #personal .month-controls button { color: var(--green); font-size: 1.45em; }
@@ -113,11 +113,9 @@
 #personal .notice { margin:.4rem 1rem 0; color:var(--secondary); font-size:.875em; }
 #personal .notes.all { grid-template-columns:minmax(0,1fr); }
 #personal .notes small { white-space:pre-line; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; }
-@media (max-width: 23rem) { #personal .times { grid-template-columns:minmax(0,1fr); } }
 #personal { --shadow: 0 2px 6px #14271c20; }
 #personal .hero, #personal .events, #personal .month, #personal .record, #personal .note { box-shadow:var(--shadow); }
 #personal .hero { border:1px solid #ffffff26; }
-#personal .section { margin-block:1rem; }
 #personal .section h2 { margin:0 0 .45rem; }
 #personal .empty { background:var(--paper); border:1px solid var(--line); border-radius:.7rem; }
 #personal .action, #personal .month-controls button, #personal .back { border:1px solid var(--line); box-shadow:var(--shadow); }
@@ -140,21 +138,25 @@
 #personal .brand { display:inline-flex; align-items:center; gap:.55rem; color:var(--text); }
 #personal .panel-mark { display:grid; place-items:center; min-width:2.2rem; min-height:2.2rem; padding:.2rem; border-radius:.55rem; background:#10482f; color:#fff; font-weight:850; }
 #personal .overview-modules { display:grid; gap:.7rem; margin-top:.8rem; grid-template-columns:repeat(2,minmax(0,1fr)); }
-#personal .section { min-width:0; background:var(--paper); border:1px solid var(--line); border-radius:.85rem; box-shadow:0 2px 0 var(--line); padding:.7rem; }
+#personal .section { margin-block:1rem; min-width:0; background:var(--paper); border:1px solid var(--line); border-radius:.85rem; box-shadow:0 2px 0 var(--line); padding:.7rem; }
 #personal .overview-modules .section { margin:0; }
 #personal .notes-module { grid-column:1 / -1; }
 #personal .section .events, #personal .section .month, #personal .section .empty { border:0; box-shadow:none; padding:0; }
 #personal .section .agenda-day + .agenda-day { border-top:1px solid var(--line); padding-top:.55rem; }
 #personal .overview-modules .event { display:flex; flex-direction:column; gap:.15rem; }
 #personal .overview-modules .notes { grid-template-columns:minmax(0,1fr); }
-#personal .note:first-child { background:var(--paper); }
 #personal .note small { color:var(--secondary); }
 #personal .days button[aria-pressed="true"],
 #personal nav button[aria-current="page"],
 #personal .primary,
 #personal .create { background:#10482f; color:#fff; border-color:#10482f; }
 #personal .controls button:not(.primary) { border:1px solid var(--line); border-radius:.6rem; padding-inline:.7rem; background:var(--paper); }
-#personal .action { min-height:44px; }
+#personal #google-summary p { margin:0; }
+#personal #google-summary p + button { margin-top:.55rem; }
+@media (max-width: 460px) {
+  #personal form .times { grid-template-columns:minmax(0,1fr); }
+}
+
 @media (max-width: 359px) { #personal .overview-modules { grid-template-columns:minmax(0,1fr); } }
 @media (forced-colors: active) {
   #personal .panel-mark, #personal nav button[aria-current="page"], #personal .days button[aria-pressed="true"] {
@@ -190,7 +192,7 @@ body { margin: 0; background: light-dark(#e6ebdf, #101913); color-scheme: light 
     </nav>
   </div>
 </div>
-<script src="./google-sync.js?v=auto2"></script>
+<script src="./google-sync.js?v=1.0.0"></script>
 <script id="personal-script">
 (() => {
   const root = document.getElementById('personal');
@@ -225,9 +227,10 @@ body { margin: 0; background: light-dark(#e6ebdf, #101913); color-scheme: light 
   let page = 'overview';
   let view = null;
   let data = {events:[], notes:[]};
+  let loadedRecords = null;
   try {
-    const saved = localStorage.getItem(storageKey);
-    if (saved) data = validate(JSON.parse(saved));
+    loadedRecords = localStorage.getItem(storageKey);
+    if (loadedRecords) data = validate(JSON.parse(loadedRecords));
   } catch {
     storageReadable = false;
     showNotice('Не удалось прочитать записи браузера. Сохранение отключено, чтобы не перезаписать данные.');
@@ -295,14 +298,20 @@ body { margin: 0; background: light-dark(#e6ebdf, #101913); color-scheme: light 
   function save(records = data) {
     if (!storageReadable) return false;
     try {
-      localStorage.setItem(storageKey, JSON.stringify(records));
-      showNotice('');
-      googleSync?.changed();
-      return true;
+      if (localStorage.getItem(storageKey) !== loadedRecords) {
+        showNotice('Записи изменились в другом окне. Скачайте копию несохранённых изменений и откройте панель заново.');
+        return false;
+      }
+      const serialized = JSON.stringify(records);
+      localStorage.setItem(storageKey, serialized);
+      loadedRecords = serialized;
     } catch {
       showNotice('Браузер не сохранил изменения. Скачайте копию до закрытия панели.');
       return false;
     }
+    showNotice('');
+    googleSync?.changed();
+    return true;
   }
   function weekday(date) { return date.getUTCDay() >= 1 && date.getUTCDay() <= 5; }
   function ordinal(event, date) {
@@ -356,7 +365,7 @@ body { margin: 0; background: light-dark(#e6ebdf, #101913); color-scheme: light 
     return `<div class="events">${rows.map(({id, slot, entry}) => {
       const series = data.events.find(item => item.id === id);
       const time = entry.allDay ? 'Весь день' : entry.start;
-      return `<button type="button" class="event" data-event="${escape(id)}" data-slot="${slot}" data-occurrence-date="${date}"><time>${escape(time)}</time>
+      return `<button type="button" class="event" data-event="${escape(id)}" data-slot="${slot}" data-occurrence-date="${date}">${entry.allDay ? '<span class="event-time">Весь день</span>' : `<time class="event-time" datetime="${escape(time)}">${escape(time)}</time>`}
         <span>${escape(entry.title)}${series.repeat === 'none' ? '' : `<small>${repeats[series.repeat]}</small>`}</span></button>`;
     }).join('')}</div>`;
   }
@@ -517,9 +526,9 @@ body { margin: 0; background: light-dark(#e6ebdf, #101913); color-scheme: light 
   });
   main.addEventListener('submit', event => {
     event.preventDefault();
-    if (!storageReadable) return;
     const form = event.target;
     if (form.hasAttribute('data-google-config')) { googleSync.configure(form); return; }
+    if (!storageReadable) return;
     const values = new FormData(form);
     const get = name => String(values.get(name) ?? '');
     const original = view.record;
@@ -584,7 +593,7 @@ body { margin: 0; background: light-dark(#e6ebdf, #101913); color-scheme: light 
     const button = event.target.closest('button');
     if (!button || !root.contains(button) || button.type === 'submit') return;
     const {page:destination, month:direction, day, event:id, slot, note, action} = button.dataset;
-    if (!menu.contains(button) || action === 'backups' || action === 'install') menu.open = false;
+    if (!menu.contains(button) || ['backups', 'google', 'install'].includes(action)) menu.open = false;
     if (action === 'install' && installPrompt) {
       const prompt = installPrompt;
       installPrompt = null;
@@ -665,9 +674,12 @@ body { margin: 0; background: light-dark(#e6ebdf, #101913); color-scheme: light 
     countThrough(event,date) {
       if (date < event.date) return 0;
       let slot = date;
-      let count = 0;
-      while (slot >= event.date && !(count = ordinal(event,slot))) slot = offsetDay(slot,-1);
-      return count;
+      while (slot >= event.date) {
+        const count = ordinal(event, slot);
+        if (count) return count;
+        slot = offsetDay(slot, -1);
+      }
+      return 0;
     },
     refresh() { if (view?.type === 'google') render(); else refreshSyncSummary(); },
     offerRestore(value) {
