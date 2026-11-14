@@ -190,7 +190,7 @@ body { margin: 0; background: light-dark(#e6ebdf, #101913); color-scheme: light 
     </nav>
   </div>
 </div>
-<script src="./google-sync.js?v=5dcb333-new"></script>
+<script src="./google-sync.js?v=auto1"></script>
 <script id="personal-script">
 (() => {
   const root = document.getElementById('personal');
@@ -584,7 +584,7 @@ body { margin: 0; background: light-dark(#e6ebdf, #101913); color-scheme: light 
       return;
     }
     if (button.dataset.google) { googleSync.action(button.dataset.google); return; }
-    if (action === 'google') { view = {type:'google'}; render(); return; }
+    if (action === 'google') { googleSync?.open(); view = {type:'google'}; render(); return; }
     if (action === 'export') { downloadBackup(); return; }
     if (action === 'import') { backupFile.click(); return; }
     if (action === 'restore' && candidate) {

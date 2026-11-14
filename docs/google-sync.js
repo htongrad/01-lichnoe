@@ -9,8 +9,9 @@
   let token;
   let expiresAt = 0;
   let client;
+  let preparation;
+  let retryOnOnline = false;
   let busy = false;
-  let auto = false;
   let connecting = false;
   let timer;
   let status = '';
@@ -34,7 +35,7 @@
   async function request(url, options = {}, allowed = []) {
     if (!ready()) throw new Error('Доступ Google истёк. Подключитесь снова.');
     const response = await fetch(url, {...options, headers:{Authorization:'Bearer ' + token,...options.headers}});
-    if (response.status === 401) { token = null; auto = false; }
+    if (response.status === 401) token = null;
     if (!response.ok && !allowed.includes(response.status)) {
       const body = await response.json().catch(() => null);
       throw new Error('Google ' + response.status + (body?.error?.message ? ': ' + body.error.message : ''));
@@ -61,10 +62,11 @@
     catch (error) { status = error.message || 'Операция не завершена.'; }
     finally { busy = false; api.refresh(); }
   }
-  async function prepare() {
+  async function prepare(clientId) {
     if (!window.google?.accounts?.oauth2) await script('https://accounts.google.com/gsi/client');
+    if (clientId !== settings.clientId) return;
     client = google.accounts.oauth2.initTokenClient({
-      client_id:settings.clientId, scope:'openid ' + DRIVE_SCOPE + ' ' + CAL_SCOPE,
+      client_id:clientId, scope:'openid ' + DRIVE_SCOPE + ' ' + CAL_SCOPE,
       callback: result => {
         connecting = false;
         if (result.error || !google.accounts.oauth2.hasGrantedAllScopes(result, 'openid', DRIVE_SCOPE, CAL_SCOPE)) {
@@ -81,15 +83,24 @@
             }
             settings.account = profile.sub;
             persist();
-            return 'Google подключён.';
           } catch (error) {
             token = null;
             throw error;
           }
+          if (autoEnabled()) return sync();
+          return settings.folder ? 'Google подключён. Нажмите «Синхронизировать» для первого запуска.'
+            : 'Google подключён. Выберите папку «01 ЛИЧНОЕ».';
         });
       },
       error_callback:() => { connecting = false; status = 'Окно Google закрыто или заблокировано.'; api.refresh(); }
     });
+  }
+  function warmUp() {
+    if (settings.clientId && !client && !preparation && navigator.onLine) {
+      preparation = prepare(settings.clientId).finally(() => { preparation = null; });
+      preparation.catch(() => {});
+    }
+    return preparation;
   }
   async function pickFolder() {
     if (!window.google?.picker) {
@@ -109,6 +120,11 @@
     });
     if (!folder) return 'Выбор папки отменён.';
     if (folder.name?.trim() !== '01 ЛИЧНОЕ') throw new Error('Выберите папку с названием «01 ЛИЧНОЕ».');
+    if (settings.folder !== folder.id) {
+      settings.autoSync = false;
+      delete settings.backupId;
+      delete settings.backupVersion;
+    }
     settings.folder = folder.id;
     persist();
     return 'Папка «01 ЛИЧНОЕ» выбрана.';
@@ -220,25 +236,45 @@
     settings.mirrored = [...known].filter(key => desired.has(key));
     persist();
   }
+  const autoEnabled = () => Boolean(settings.folder && (settings.autoSync ?? settings.backupId));
   async function sync() {
+    retryOnOnline = !navigator.onLine;
+    if (retryOnOnline) return 'Нет интернета. Панель повторит синхронизацию после подключения.';
     const records = structuredClone(api.records());
-    await backup(records);
-    try { await mirror(records.events); }
-    catch (error) { throw new Error('Копия на Диске сохранена. Календарь: '+error.message); }
-    auto = true;
+    let copied = false;
+    try {
+      await backup(records);
+      copied = true;
+      await mirror(records.events);
+    } catch (error) {
+      retryOnOnline = !navigator.onLine || error instanceof TypeError;
+      if (copied) throw new Error('Копия на Диске сохранена. Календарь: '+error.message);
+      throw error;
+    }
+    settings.autoSync = true;
+    persist();
     if (JSON.stringify(records) !== JSON.stringify(api.records())) schedule();
     return 'Копия сохранена. Календарь обновлён.';
   }
   function schedule() {
     clearTimeout(timer);
-    if (!auto || !ready()) return;
+    if (!autoEnabled() || !ready()) return;
     timer = setTimeout(() => {
       if (busy) { schedule(); return; }
       run(sync);
     },1500);
   }
   window.lichnoeGoogle = {
-    init(handlers) { api = handlers; },
+    init(handlers) {
+      api = handlers;
+      window.addEventListener('online', () => {
+        if ((autoEnabled() || retryOnOnline) && ready()) {
+          if (busy) schedule();
+          else run(sync);
+        }
+      });
+    },
+    open() { warmUp(); },
     schedule,
     clearRestore() { restoreFile = null; },
     restored() {
@@ -249,6 +285,7 @@
       persist();
     },
     html() {
+      const disconnected = autoEnabled() && !ready() && !busy && !connecting;
       const disabled = busy || connecting ? ' disabled' : '';
       if (!settings.clientId) return `<form data-google-config>
         <label>Идентификатор OAuth клиента<input name="clientId" required autocapitalize="none" spellcheck="false" placeholder="…apps.googleusercontent.com"></label>
@@ -256,6 +293,7 @@
         <label>Ключ Google Picker<input name="apiKey" required autocapitalize="none" spellcheck="false"></label>
         <button type="submit" class="action primary">Сохранить настройки</button><p role="alert" data-google-validation></p></form><p class="record" role="status">${esc(status)}</p>`;
       return `<p class="record" role="status">${esc(status || 'Записи хранятся в браузере. Google получает резервную копию и зеркало событий.')}</p>
+      ${disconnected ? '<p>Подключите Google, чтобы синхронизировать изменения. Папка сохранена.</p>' : ''}
       <div class="controls">${ready()
         ? `<button type="button" class="action" data-google="folder"${disabled}>${settings.folder?'Изменить папку':'Выбрать папку на Диске'}</button>
         <button type="button" class="action primary" data-google="sync"${disabled}>Синхронизировать</button>
@@ -294,6 +332,7 @@
         return;
       }
       settings = next;
+      warmUp();
       status = 'Настройки сохранены.';
       api.refresh();
     },
@@ -306,7 +345,12 @@
           try { client.requestAccessToken({prompt:''}); }
           catch { connecting = false; status = 'Не удалось открыть окно Google.'; api.refresh(); }
         }
-        else run(async () => { await prepare(); return 'Google готов. Нажмите «Подключить Google» ещё раз.'; });
+        else run(async () => {
+          const loading = warmUp();
+          if (!loading) throw new Error('Проверьте подключение к интернету.');
+          await loading;
+          return 'Google готов. Нажмите «Подключить Google» ещё раз.';
+        });
       } else if (action === 'folder') run(pickFolder);
       else if (action === 'sync') run(sync);
       else if (action === 'restore') run(async () => {
@@ -318,7 +362,7 @@
         return 'Копия загружена. Подтвердите добавление записей.';
       });
       else if (action === 'disconnect' || action === 'reset') {
-        token = null; auto = false; client = null; clearTimeout(timer);
+        token = null; client = null; clearTimeout(timer);
         if (action === 'reset') { settings = {}; persist(); }
         status = 'Google отключён.';
         api.refresh();
