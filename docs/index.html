@@ -179,7 +179,7 @@ body { margin: 0; background: light-dark(#e6ebdf, #101913); color-scheme: light 
       <button type="button" data-action="google">Синхронизация Google</button>
       <button type="button" data-action="backups">Копии данных</button>
       <button type="button" data-action="install" hidden>Установить приложение</button>
-      <small>Сборка 1.1.0</small>
+      <small>Сборка 1.2.0</small>
     </div>
   </details></header>
   <p class="notice" role="status" hidden></p>
@@ -194,7 +194,7 @@ body { margin: 0; background: light-dark(#e6ebdf, #101913); color-scheme: light 
     </nav>
   </div>
 </div>
-<script src="./google-sync.js?v=1.1.0"></script>
+<script src="./google-sync.js?v=1.2.0"></script>
 <script id="personal-script">
 (() => {
   const root = document.getElementById('personal');
@@ -692,6 +692,7 @@ body { margin: 0; background: light-dark(#e6ebdf, #101913); color-scheme: light 
     navigator.serviceWorker.register('./sw.js').catch(error => console.warn('Service worker:', error));
   }
   googleSync?.init({
+    hasLocalRecords: () => loadedRecords !== null,
     records() {
       if (!storageReadable) throw new Error('Записи браузера недоступны. Синхронизация остановлена.');
       const saved = localStorage.getItem(storageKey);
