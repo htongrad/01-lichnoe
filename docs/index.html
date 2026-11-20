@@ -131,6 +131,7 @@
 #personal .menu-items { position:absolute; inset-inline-end:0; top:calc(100% + .35rem); width:min(14rem, 70vw); padding:.35rem; background:var(--paper); border:1px solid var(--line); border-radius:.7rem; box-shadow:var(--shadow); }
 #personal .menu-items button { width:100%; text-align:start; padding:.45rem .55rem; border-radius:.45rem; }
 #personal .menu-items button:focus-visible { background:var(--tint); }
+#personal .menu-items small { display:block; padding:.35rem .55rem; }
 #personal .agenda-day + .agenda-day { margin-top:.6rem; }
 #personal .agenda-day h3 { margin:0 0 .25rem; color:var(--green); font-size:.87em; }
 #personal .agenda-range { display:block; margin:-.2rem 0 .5rem; }
@@ -178,6 +179,7 @@ body { margin: 0; background: light-dark(#e6ebdf, #101913); color-scheme: light 
       <button type="button" data-action="google">Синхронизация Google</button>
       <button type="button" data-action="backups">Копии данных</button>
       <button type="button" data-action="install" hidden>Установить приложение</button>
+      <small>Сборка 1.1.0</small>
     </div>
   </details></header>
   <p class="notice" role="status" hidden></p>
@@ -192,7 +194,7 @@ body { margin: 0; background: light-dark(#e6ebdf, #101913); color-scheme: light 
     </nav>
   </div>
 </div>
-<script src="./google-sync.js?v=1.0.0"></script>
+<script src="./google-sync.js?v=1.1.0"></script>
 <script id="personal-script">
 (() => {
   const root = document.getElementById('personal');
@@ -220,8 +222,8 @@ body { margin: 0; background: light-dark(#e6ebdf, #101913); color-scheme: light 
   const fullDate = new Intl.DateTimeFormat('ru', {weekday:'long', day:'numeric', month:'long', timeZone:'UTC'});
   const monthName = new Intl.DateTimeFormat('ru', {month:'long', year:'numeric', timeZone:'UTC'});
   const dayMs = 86400000;
-  const localNow = new Date();
-  const today = key(new Date(Date.UTC(localNow.getFullYear(), localNow.getMonth(), localNow.getDate())));
+  let today = localDay(new Date());
+  let dayTimer;
   let selected = today;
   let month = today.slice(0, 7);
   let page = 'overview';
@@ -264,7 +266,7 @@ body { margin: 0; background: light-dark(#e6ebdf, #101913); color-scheme: light 
     const url = URL.createObjectURL(new Blob([JSON.stringify(backup,null,2)], {type:'application/json'}));
     const link = document.createElement('a');
     link.href = url;
-    link.download = 'lichnoe-' + today + '.json';
+    link.download = 'lichnoe-' + localDay(new Date()) + '.json';
     root.append(link);
     link.click();
     link.remove();
@@ -275,27 +277,52 @@ body { margin: 0; background: light-dark(#e6ebdf, #101913); color-scheme: light 
     const file = backupFile.files[0];
     backupFile.value = '';
     if (!file) return;
-    try {
-      if (file.size > 5_000_000) throw new Error('Too large');
-      candidate = validate(JSON.parse(await file.text()));
-      showNotice('');
-      view = {type:'backups'};
-      render();
-    } catch {
-      candidate = null;
-      showNotice('Не удалось открыть копию. Записи в браузере сохранены.');
-      render();
+    candidate = null;
+    let contents;
+    let error = '';
+    try { contents = await file.text(); }
+    catch { error = 'Браузер не смог прочитать файл копии.'; }
+    if (!error) {
+      try { contents = JSON.parse(contents); }
+      catch { error = 'Файл копии должен содержать корректный JSON.'; }
     }
+    if (!error) {
+      try { candidate = validate(contents); }
+      catch { error = 'Формат копии не поддерживается или в записях есть ошибки.'; }
+    }
+    showNotice(error);
+    view = {type:'backups'};
+    render();
   });
 
   function key(date) { return date.toISOString().slice(0, 10); }
+  function localDay(date) {
+    return key(new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate())));
+  }
+  function updateToday() {
+    const now = new Date();
+    const currentDay = localDay(now);
+    if (currentDay !== today) {
+      const followToday = selected === today && !view;
+      today = currentDay;
+      if (followToday) {
+        selected = today;
+        month = today.slice(0, 7);
+      }
+      if (!view && (page === 'overview' || (page === 'calendar' && followToday))) render();
+    }
+    const midnight = new Date(+now);
+    midnight.setHours(24, 0, 0, 0);
+    clearTimeout(dayTimer);
+    dayTimer = setTimeout(updateToday, Math.min(midnight - now, 3600000));
+  }
   function asDate(value) { return new Date(value + 'T00:00:00Z'); }
   function capital(text) { return text.charAt(0).toUpperCase() + text.slice(1); }
   function escape(text) {
     return String(text ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'}[char]));
   }
   function showNotice(text) { notice.textContent = text; notice.hidden = !text; }
-  function save(records = data) {
+  function save(records = data, storageError = '') {
     if (!storageReadable) return false;
     try {
       if (localStorage.getItem(storageKey) !== loadedRecords) {
@@ -305,8 +332,10 @@ body { margin: 0; background: light-dark(#e6ebdf, #101913); color-scheme: light 
       const serialized = JSON.stringify(records);
       localStorage.setItem(storageKey, serialized);
       loadedRecords = serialized;
-    } catch {
-      showNotice('Браузер не сохранил изменения. Скачайте копию до закрытия панели.');
+    } catch (error) {
+      showNotice(error.name === 'QuotaExceededError' && storageError
+        ? storageError
+        : 'Браузер не сохранил изменения. Скачайте копию до закрытия панели.');
       return false;
     }
     showNotice('');
@@ -611,7 +640,7 @@ body { margin: 0; background: light-dark(#e6ebdf, #101913); color-scheme: light 
         return [...current, ...incoming.filter(item => !ids.has(item.id))];
       };
       const merged = {events:addMissing(data.events,candidate.events), notes:addMissing(data.notes,candidate.notes)};
-      if (save(merged)) {
+      if (save(merged, 'В браузере не хватает места для записей из копии.')) {
         data = merged;
         googleSync?.restored();
         candidate = null;
@@ -657,6 +686,8 @@ body { margin: 0; background: light-dark(#e6ebdf, #101913); color-scheme: light 
     installPrompt = null;
     installButton.hidden = true;
   });
+  window.addEventListener('focus', updateToday);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) updateToday(); });
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').catch(error => console.warn('Service worker:', error));
   }
@@ -689,6 +720,7 @@ body { margin: 0; background: light-dark(#e6ebdf, #101913); color-scheme: light 
       render();
     }
   });
+  updateToday();
   render();
 })();
 </script>

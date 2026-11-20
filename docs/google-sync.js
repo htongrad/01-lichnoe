@@ -13,6 +13,7 @@
   let client;
   let preparation;
   let retryOnOnline = false;
+  let missingBackup = false;
   let busy = false;
   let connecting = false;
   let timer;
@@ -90,6 +91,7 @@
               token = null; throw new Error('Выберите тот же аккаунт Google, который подключали ранее.');
             }
             settings.account = profile.sub;
+            settings.timeZone ||= Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
             persist();
           } catch (error) {
             token = null;
@@ -135,6 +137,8 @@
       delete settings.lastSync;
       delete settings.backupId;
       delete settings.backupVersion;
+      delete settings.creatingBackupId;
+      missingBackup = false;
     }
     settings.folder = folder.id;
     persist();
@@ -148,12 +152,16 @@
     },'files');
     return rows[0];
   }
-  async function backup(records) {
+  async function backup(records, createOnly) {
     const existing = await findBackup();
-    if (!existing && settings.backupId) {
-      throw new Error('Сохранённая копия недоступна. Проверьте папку и доступ к файлу на Диске.');
+    missingBackup = !existing;
+    if (existing && createOnly) {
+      throw new Error('В папке уже есть копия. Если она изменилась, сначала восстановите её с Диска.');
     }
-    const file = {format:'lichnoe-backup',version:1,exportedAt:new Date().toISOString(),data:records};
+    if (!existing && settings.backupId && !createOnly) {
+      throw new Error('Сохранённая копия недоступна. Проверьте папку или выберите «Создать копию, если её нет».');
+    }
+    const file = {format:'lichnoe-backup',version:1,exportedAt:new Date().toISOString(),timeZone:settings.timeZone,data:records};
     if (existing && (settings.backupId !== existing.id || settings.backupVersion !== existing.version)) {
       throw new Error('На Диске есть копия, которой этот браузер не управлял. Сначала восстановите её, чтобы сохранить записи.');
     }
@@ -162,15 +170,33 @@
     if (existing) {
       saved = await request(url + '/' + encodeURIComponent(existing.id) + '?uploadType=media&fields=id,version', json('PATCH',file));
     } else {
+      if (createOnly) {
+        const folder = await (await request(DRIVE+'files/'+encodeURIComponent(settings.folder)+'?fields=name,mimeType,trashed')).json();
+        if (folder.name !== '01 ЛИЧНОЕ' || folder.mimeType !== 'application/vnd.google-apps.folder' || folder.trashed) {
+          throw new Error('Выберите рабочую папку «01 ЛИЧНОЕ» заново.');
+        }
+      }
+      if (!settings.creatingBackupId) {
+        const ids = await (await request(DRIVE+'files/generateIds?count=1&space=drive')).json();
+        if (!ids.ids?.[0]) throw new Error('Google не выдал идентификатор для новой копии. Повторите действие.');
+        settings.creatingBackupId = ids.ids[0];
+        persist();
+      }
       const boundary = 'lichnoe_' + crypto.randomUUID();
-      const metadata = {name:backupName,parents:[settings.folder],mimeType:'application/json',appProperties:{panelBackup:TAG}};
+      const metadata = {id:settings.creatingBackupId,name:backupName,parents:[settings.folder],mimeType:'application/json',appProperties:{panelBackup:TAG}};
       const body = '--'+boundary+'\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n'+JSON.stringify(metadata)
         +'\r\n--'+boundary+'\r\nContent-Type: application/json\r\n\r\n'+JSON.stringify(file)+'\r\n--'+boundary+'--';
-      saved = await request(url + '?uploadType=multipart&fields=id,version', {method:'POST',headers:{'Content-Type':'multipart/related; boundary='+boundary},body});
+      saved = await request(url + '?uploadType=multipart&fields=id,version', {method:'POST',headers:{'Content-Type':'multipart/related; boundary='+boundary},body}, [409]);
+      if (saved.status === 409) {
+        throw new Error('Google уже получил копию. Нажмите «Восстановить с Диска», чтобы проверить её.');
+      }
     }
     const info = await saved.json();
+    if (!info.id || !info.version) throw new Error('Google не подтвердил версию сохранённой копии.');
     settings.backupId = info.id;
     settings.backupVersion = info.version;
+    delete settings.creatingBackupId;
+    missingBackup = false;
     persist();
   }
   const plus = (date, days) => new Date(Date.parse(date + 'T00:00:00Z') + days*86400000).toISOString().slice(0,10);
@@ -221,7 +247,7 @@
     return Array.from(new Uint8Array(bytes),x=>x.toString(16).padStart(2,'0')).join('');
   }
   async function mirror(events) {
-    const zone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+    const zone = settings.timeZone;
     const desired = calendarRows(events,zone);
     const remote = await list(CAL, {privateExtendedProperty:'panel='+TAG,maxResults:'2500'},'items');
     const known = new Set(settings.mirrored || []);
@@ -251,14 +277,14 @@
     persist();
   }
   const autoEnabled = () => Boolean(settings.folder && (settings.autoSync ?? settings.backupId));
-  function sync() {
-    if (!navigator.locks) return sendChanges();
+  function sync(createOnly = false) {
+    if (!navigator.locks) return sendChanges(createOnly);
     return navigator.locks.request(stateKey, {ifAvailable:true}, lock => {
       if (!lock) throw new Error('Синхронизация идёт в другом окне. Повторите после её завершения.');
-      return sendChanges();
+      return sendChanges(createOnly);
     });
   }
-  async function sendChanges() {
+  async function sendChanges(createOnly) {
     retryOnOnline = !navigator.onLine;
     if (retryOnOnline) return 'Нет интернета. Панель повторит синхронизацию после подключения.';
     const records = structuredClone(api.records());
@@ -267,7 +293,7 @@
     persist();
     let copied = false;
     try {
-      await backup(records);
+      await backup(records, createOnly);
       copied = true;
       await mirror(records.events);
     } catch (error) {
@@ -326,7 +352,7 @@
       let action = '';
       if (busy || connecting) message = 'Подключение или синхронизация…';
       else if (!navigator.onLine) message = 'Есть изменения для отправки. Панель ждёт интернет.';
-      else if (!autoEnabled()) action = '<button type="button" class="action" data-action="google">Открыть синхронизацию</button>';
+      else if (missingBackup || !autoEnabled()) action = '<button type="button" class="action" data-action="google">Открыть синхронизацию</button>';
       else if (!ready()) action = '<button type="button" class="action" data-google="connect">Подключить Google</button>';
       else if (failed || retryOnOnline) action = '<button type="button" class="action" data-google="sync">Повторить</button>';
       if (failed && status) message += ' ' + status;
@@ -335,8 +361,10 @@
     clearRestore() { restoreFile = null; },
     restored() {
       if (!restoreFile) return;
+      if (!settings.lastSync && restoreFile.timeZone) settings.timeZone = restoreFile.timeZone;
       settings.backupId = restoreFile.id;
       settings.backupVersion = restoreFile.version;
+      delete settings.creatingBackupId;
       restoreFile = null;
       persist();
     },
@@ -349,11 +377,13 @@
         <label>Ключ Google Picker<input name="apiKey" required autocapitalize="none" spellcheck="false"></label>
         <button type="submit" class="action primary">Сохранить настройки</button><p role="alert" data-google-validation></p></form><p class="record" role="status">${esc(status)}</p>`;
       return `<p class="record" role="status">${esc(status || 'Записи хранятся в браузере. Google получает резервную копию и зеркало событий.')}</p>
+      ${settings.timeZone ? '<p><small>Часовой пояс событий в Google: ' + esc(settings.timeZone) + '</small></p>' : ''}
       ${disconnected ? '<p>Подключите Google, чтобы синхронизировать изменения. Папка сохранена.</p>' : ''}
       <div class="controls">${ready()
         ? `<button type="button" class="action" data-google="folder"${disabled}>${settings.folder?'Изменить папку':'Выбрать папку на Диске'}</button>
         <button type="button" class="action primary" data-google="sync"${disabled}>Синхронизировать</button>
         <button type="button" class="action" data-google="restore"${disabled}>Восстановить с Диска</button>
+        ${missingBackup ? '<button type="button" class="action" data-google="create-copy"' + disabled + '>Создать копию, если её нет</button>' : ''}
         <button type="button" data-google="disconnect"${disabled}>Отключить</button>`
         : `<button type="button" class="action primary" data-google="connect"${disabled}>Подключить Google</button>`}
         <button type="button" data-google="reset"${disabled}>Изменить настройки</button></div>`;
@@ -381,7 +411,7 @@
         input.focus();
         return;
       }
-      const next = {clientId,projectNumber,apiKey};
+      const next = {clientId,projectNumber,apiKey,timeZone:settings.timeZone};
       try { localStorage.setItem(stateKey, JSON.stringify(next)); }
       catch {
         form.querySelector('[data-google-validation]').textContent = 'Браузер не сохранил настройки. Откройте панель в обычной вкладке Chrome.';
@@ -409,17 +439,28 @@
         });
       } else if (action === 'folder') run(pickFolder);
       else if (action === 'sync') run(sync);
+      else if (action === 'create-copy') run(() => sync(true));
       else if (action === 'restore') run(async () => {
         const file = await findBackup();
-        if (!file) throw new Error('В этой папке пока нет резервной копии.');
+        missingBackup = !file;
+        if (!file) throw new Error('В этой папке пока нет резервной копии. Нажмите «Создать копию, если её нет».');
         const copy = await (await request(DRIVE+'files/'+encodeURIComponent(file.id)+'?alt=media')).json();
         api.offerRestore(copy);
-        restoreFile = file;
+        let timeZone;
+        if (typeof copy.timeZone === 'string') {
+          try { timeZone = new Intl.DateTimeFormat('ru', {timeZone:copy.timeZone}).resolvedOptions().timeZone; }
+          catch { /* Older or invalid timezone metadata does not block restore. */ }
+        }
+        restoreFile = {...file,timeZone};
         return 'Копия загружена. Подтвердите добавление записей.';
       });
       else if (action === 'disconnect' || action === 'reset') {
         token = null; client = null; clearTimeout(timer);
-        if (action === 'reset') { settings = {}; persist(); }
+        if (action === 'reset') {
+          settings = {timeZone:settings.timeZone};
+          missingBackup = false;
+          persist();
+        }
         failed = false;
         clearTimeout(expirationTimer);
         status = 'Google отключён.';

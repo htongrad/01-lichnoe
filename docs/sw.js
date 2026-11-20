@@ -1,10 +1,13 @@
 const prefix = 'lichnoe-shell-';
-const cacheName = prefix + 'v6';
+const version = '1.1.0';
+const cacheName = prefix + version;
 const home = new URL('./', self.registration.scope);
 const shell = new URL('index.html', home);
-const syncScript = new URL('google-sync.js?v=1.0.0', home);
+const syncPath = 'google-sync.js?v=' + version;
+const syncScript = new URL(syncPath, home);
 self.addEventListener('install', event => {
-  event.waitUntil(caches.open(cacheName).then(cache => cache.addAll([shell.href, syncScript.href])));
+  event.waitUntil(caches.open(cacheName).then(cache =>
+    cache.addAll([shell.href, syncScript.href].map(url => new Request(url, {cache:'reload'})))));
 });
 self.addEventListener('activate', event => {
   event.waitUntil(caches.keys().then(keys => Promise.all(keys
@@ -28,7 +31,7 @@ self.addEventListener('fetch', event => {
     } catch {
       return await cache.match(shell.href) ?? Response.error();
     }
-    if (response.ok && (await response.clone().text()).includes('./google-sync.js?v=1.0.0')) {
+    if (response.ok && (await response.clone().text()).includes('./' + syncPath)) {
       try { await cache.put(shell.href, response.clone()); } catch { /* Storage may be full. */ }
     }
     return response;
