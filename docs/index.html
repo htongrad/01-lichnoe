@@ -346,7 +346,7 @@ body {
       <button type="button" data-action="google">Синхронизация Google</button>
       <button type="button" data-action="backups">Копии данных</button>
       <button type="button" data-action="install" hidden>Установить приложение</button>
-      <small>Сборка 1.3.0</small>
+      <small>Сборка 1.3.1</small>
     </div>
   </details></header>
   <p class="notice" role="status" hidden></p>
@@ -361,7 +361,7 @@ body {
     </nav>
   </div>
 </div>
-<script src="./google-sync.js?v=1.3.0"></script>
+<script src="./google-sync.js?v=1.3.1"></script>
 <script id="personal-script">
 (() => {
   const root = document.getElementById('personal');
@@ -920,10 +920,11 @@ body {
       return 0;
     },
     refresh() { if (view?.type === 'google') render(); else refreshSyncSummary(); },
-    offerRestore(value) {
+    validateBackup: validate,
+    offerRestore(value, notice = '') {
       candidate = validate(value);
       view = {type:'backups'};
-      showNotice('Копия загружена с Диска. Добавьте записи из копии, чтобы сохранить их в браузере.');
+      showNotice(notice || 'Копия загружена с Диска. Добавьте записи из копии, чтобы сохранить их в браузере.');
       render();
     }
   });

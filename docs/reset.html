@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#143c2f">
+  <title>Сброс записей панелей</title>
+  <style>
+    :root { color-scheme: light dark; font: 1rem/1.5 system-ui, sans-serif; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: light-dark(#eef2ed, #16231d); color: light-dark(#16251e, #eef5ef); }
+    main { width: min(100%, 34rem); margin: auto; padding: 1.25rem 1rem 2rem; }
+    h1 { font-size: clamp(1.5rem, 7vw, 2rem); line-height: 1.12; margin: 0 0 .75rem; }
+    p { margin: .5rem 0; }
+    form, fieldset { display: grid; gap: .65rem; }
+    fieldset, .result { margin: .8rem 0 0; padding: .8rem; min-width: 0; border: 1px solid light-dark(#cbd8ce, #475b4e); border-radius: .75rem; background: light-dark(#fff, #22332a); }
+    legend { padding-inline: .3rem; font-weight: 700; }
+    label { display: flex; align-items: flex-start; gap: .7rem; min-height: 44px; cursor: pointer; }
+    input { width: 20px; height: 20px; margin: .15rem 0 0; flex: none; accent-color: #2d7858; }
+    small { display: block; font-size: .85rem; }
+    .reset { min-height: 44px; padding: .6rem .8rem; color: white; background: #8d3029; border: 1px solid #8d3029; border-radius: .65rem; font: inherit; font-weight: 700; cursor: pointer; }
+    .reset:disabled { color: light-dark(#564c4c, #ddd1d0); background: light-dark(#e7dfde, #463936); border-color: transparent; cursor: default; }
+    a { display: inline-flex; align-items: center; min-height: 44px; color: inherit; }
+    ul { margin: .4rem 0 0; padding-left: 1.5rem; }
+    [hidden] { display: none; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Сброс записей панелей</h1>
+    <p>Открой эту страницу в том же Chrome, где ведёшь панели. Закрой остальные вкладки и установленные окна панелей до сброса.</p>
+    <p>Сброс удалит все записи выбранных панелей в этом профиле Chrome, включая созданные сегодня. Подключение и выбор папок Google сохранятся.</p>
+    <form id="reset-form">
+      <fieldset>
+        <legend>Какие панели очистить</legend>
+        <label><input type="checkbox" name="panel" value="01"><span><strong>01 «Личное»</strong><small id="count-01">События и заметки</small></span></label>
+        <label><input type="checkbox" name="panel" value="02"><span><strong>02 «Хтонград»</strong><small id="count-02">Тексты, проекты, заметки и события</small></span></label>
+        <label><input type="checkbox" name="panel" value="03"><span><strong>03 «Работа»</strong><small id="count-03">Карта сети, техкарты, рабочие журналы и события</small></span></label>
+      </fieldset>
+      <button type="submit" class="reset" disabled>Очистить выбранные панели</button>
+    </form>
+    <p id="status" role="status" aria-live="polite"></p>
+    <section class="result" id="next" hidden>
+      <strong>Обнови зеркало Google Календаря</strong>
+      <p>Открой каждую очищенную панель и нажми «Синхронизировать», пока записи в ней пусты. Панель уберёт из Google Календаря события своего зеркала. События, добавленные прямо в Google Календаре, сохранятся.</p>
+      <ul id="panel-links"></ul>
+    </section>
+  </main>
+  <script>
+    'use strict';
+
+    const names = {'01':'01 «Личное»', '02':'02 «Хтонград»', '03':'03 «Работа»'};
+    const paths = {'01':'./', '02':'../02-htongrad/', '03':'../03-rabota/'};
+    const key01 = 'lichnoe:v1';
+    const key02 = 'htongrad:records:v1';
+    const network = 'panel-03:network';
+    const workKeys = new Set([
+      network, 'panel-03:precision-visits', 'panel-03:network-baselines', 'panel-03:bar-operations',
+      'panel-03:menu-plans', 'panel-03:menu-changes', 'panel-03:techcards', 'panel-03:economy',
+      'panel-03:financial-review', 'panel-03:point-operations', 'panel-03:launches', 'panel-03:management',
+      'panel-03:sales', 'panel-03:stock', 'panel-03:training', 'panel-03:training-plans',
+      'panel-03:equipment', 'panel-03:suppliers', 'panel-03:restore-transaction'
+    ]);
+    // An explicit empty dataset lets the next sync reconcile the existing Calendar mirror.
+    const empty01 = {events:[],notes:[]};
+    const empty02 = {projects:[],texts:[],notes:[],events:[]};
+    const empty03 = {profiles:[],points:[]};
+    const syncLocks = {'01':['lichnoe:google:v1'], '02':['htongrad:google:v1'], '03':['panel-03:google','panel-03-restore']};
+    const form = document.querySelector('#reset-form');
+    const submit = form.querySelector('button');
+    const checks = [...form.querySelectorAll('input')];
+    const status = document.querySelector('#status');
+    const next = document.querySelector('#next');
+    let displayed;
+
+    function plan(panel) {
+      if (panel === '01') return new Map([[key01, JSON.stringify(empty01)]]);
+      if (panel === '02') return new Map([[key02, JSON.stringify(empty02)], [key02+':last', null]]);
+      const changes = new Map([[network, JSON.stringify(empty03)]]);
+      for (const key of Object.keys(localStorage)) {
+        if (key !== network && (workKeys.has(key) || /^panel-03:(event|quality):.+$/.test(key))) changes.set(key, null);
+      }
+      return changes;
+    }
+
+    function snapshot(panel) {
+      const changes = plan(panel);
+      return new Map([...changes.keys()].map(key => [key, localStorage.getItem(key)]));
+    }
+
+    function countLists(raw, fields) {
+      if (raw === null) return 'Записей нет';
+      try {
+        const parsed = JSON.parse(raw);
+        const value = parsed?.data || parsed;
+        if (!Object.keys(fields).every(key => Array.isArray(value?.[key]))) throw Error();
+        return Object.entries(fields).map(([key,label]) => label + ' ' + value[key].length).join(' · ');
+      } catch {
+        return 'Данные не читаются. При сбросе исходная запись будет удалена.';
+      }
+    }
+
+    function refresh() {
+      displayed = Object.fromEntries(Object.keys(names).map(panel => [panel,snapshot(panel)]));
+      document.querySelector('#count-01').textContent = countLists(displayed['01'].get(key01), {events:'События',notes:'заметки'});
+      document.querySelector('#count-02').textContent = countLists(displayed['02'].get(key02), {texts:'Тексты',projects:'проекты',notes:'заметки',events:'события'});
+      const stored = [...displayed['03']].filter(([key,value]) => value !== null && (key !== network || value !== JSON.stringify(empty03))).length;
+      document.querySelector('#count-03').textContent = 'Блоков с данными: ' + stored + '. Сброс включает карту сети и рабочие журналы.';
+    }
+
+    function selected() {
+      return checks.filter(input => input.checked && !input.disabled).map(input => input.value);
+    }
+
+    function apply(panels) {
+      const before = new Map();
+      const changes = new Map();
+      for (const panel of panels) {
+        const current = snapshot(panel);
+        const seen = displayed[panel];
+        if (current.size !== seen.size || [...current].some(([key,value]) => seen.get(key) !== value)) {
+          refresh();
+          throw Error('Записи изменились после проверки. Сверь обновлённые данные и подтверди сброс ещё раз.');
+        }
+        for (const [key,value] of current) before.set(key,value);
+        for (const [key,value] of plan(panel)) changes.set(key,value);
+      }
+      const write = (key,value) => value === null ? localStorage.removeItem(key) : localStorage.setItem(key,value);
+      const written = [];
+      try {
+        for (const [key,value] of changes) if (value === null) { write(key,value); written.push(key); }
+        for (const [key,value] of changes) if (value !== null) { write(key,value); written.push(key); }
+      } catch {
+        for (const key of written.reverse()) write(key,before.get(key));
+        throw Error('Chrome не разрешил сброс. Проверь доступ браузера к хранилищу.');
+      }
+    }
+
+    function runWithLocks(locks, task) {
+      if (!navigator.locks || !locks.length) return task();
+      const [name,...remaining] = locks;
+      return navigator.locks.request(name,{ifAvailable:true}, lock => {
+        if (!lock) throw Error('Панель сейчас сохраняет данные. Закрой её окно и повтори.');
+        return runWithLocks(remaining,task);
+      });
+    }
+
+    form.addEventListener('change', () => { submit.disabled = !selected().length; });
+    form.addEventListener('submit', async event => {
+      event.preventDefault();
+      const panels = selected();
+      if (!panels.length || !window.confirm('Окончательно удалить локальные записи в ' + panels.map(panel => names[panel]).join(', ') + '?')) return;
+      submit.disabled = true;
+      try {
+        await runWithLocks(panels.flatMap(panel => syncLocks[panel]), () => apply(panels));
+        for (const input of checks) if (panels.includes(input.value)) input.disabled = true;
+        refresh();
+        status.textContent = 'Записи очищены: ' + panels.map(panel => names[panel]).join(', ') + '.';
+        const links = document.querySelector('#panel-links');
+        for (const panel of panels) {
+          const row = document.createElement('li');
+          const link = document.createElement('a');
+          link.href = paths[panel];
+          link.textContent = names[panel];
+          row.append(link);
+          links.append(row);
+        }
+        next.hidden = false;
+      } catch (error) {
+        status.textContent = error.message;
+      } finally {
+        submit.disabled = !selected().length;
+      }
+    });
+    try { refresh(); }
+    catch {
+      for (const input of checks) input.disabled = true;
+      status.textContent = 'Хранилище Chrome недоступно. Открой эту страницу в обычном окне браузера.';
+    }
+  </script>
+</body>
+</html>

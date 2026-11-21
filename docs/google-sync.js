@@ -59,7 +59,10 @@
     if (response.status === 401) token = null;
     if (!response.ok && !allowed.includes(response.status)) {
       const body = await response.json().catch(() => null);
-      throw new Error('Google ' + response.status + (body?.error?.message ? ': ' + body.error.message : ''));
+      const error = new Error('Google ' + response.status + (body?.error?.message ? ': ' + body.error.message : ''));
+      error.status = response.status;
+      error.reason = body?.error?.errors?.[0]?.reason;
+      throw error;
     }
     return response;
   }
@@ -161,17 +164,38 @@
     }
     return true;
   }
-  async function findLatestBackup() {
-    if (!settings.folder || !/^[\w-]+$/.test(settings.folder)) throw new Error('Сначала выберите папку «01 ЛИЧНОЕ».');
+  async function findUsableBackup(validate) {
+    if (!settings.folder || !/^[\w-]+$/.test(settings.folder)) throw new Error('Выберите папку «01 ЛИЧНОЕ».');
     const query = {
       q:"trashed = false and '" + settings.folder + "' in parents and appProperties has { key='panelBackup' and value='" + TAG + "' }",
       fields:'nextPageToken,files(id)',orderBy:'createdTime desc'
     };
+    let skipped = false;
     do {
-      const page = await (await request(DRIVE+'files'+calendarParams(query))).json();
-      if (page.files?.length) return page.files[0];
+      const page = await (await request(DRIVE+'files'+calendarParams(query), {cache:'no-store'})).json();
+      for (const file of page.files || []) {
+        let response;
+        try {
+          response = await request(DRIVE+'files/'+encodeURIComponent(file.id)+'?alt=media', {cache:'no-store'});
+        } catch (error) {
+          if (error.status !== 404 && error.status !== 410 &&
+              !(error.status === 403 && error.reason === 'insufficientFilePermissions')) throw error;
+          skipped = true;
+          continue;
+        }
+        const raw = await response.text();
+        try {
+          const copy = JSON.parse(raw);
+          validate(copy, skipped);
+          return {copy, skipped};
+        } catch {
+          skipped = true;
+        }
+      }
       query.pageToken = page.nextPageToken;
     } while (query.pageToken);
+    throw new Error(skipped ? 'В папке нет доступной исправной копии. Можно выбрать скачанный файл вручную.' :
+      'В этой папке пока нет резервной копии.');
   }
   async function isSavedSnapshot({id,hash}) {
     const response = await request(DRIVE+'files/'+encodeURIComponent(id)+'?fields='+backupFields, {}, [404]);
@@ -359,11 +383,13 @@
       run(sync);
     },5000);
   }
+  function restoreNotice(skipped) {
+    return skipped ? 'Свежая копия недоступна или повреждена. Открыта предыдущая исправная копия.' : '';
+  }
   async function restoreLatest() {
-    const file = await findLatestBackup();
-    if (!file) throw new Error('В этой папке пока нет резервной копии.');
-    const copy = await (await request(DRIVE+'files/'+encodeURIComponent(file.id)+'?alt=media')).json();
-    api.offerRestore(copy);
+    const check = api.validateBackup;
+    const {copy,skipped} = await findUsableBackup(check ?? ((candidate, skipped) => api.offerRestore(candidate, restoreNotice(skipped))));
+    if (check) api.offerRestore(copy, restoreNotice(skipped));
     restoreTimeZone = undefined;
     if (typeof copy.timeZone === 'string') {
       try { restoreTimeZone = new Intl.DateTimeFormat('ru', {timeZone:copy.timeZone}).resolvedOptions().timeZone; }
