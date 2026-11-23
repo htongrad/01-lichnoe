@@ -1,10 +1,10 @@
 'use strict';
 const prefix = 'lichnoe-shell-';
-const version = '2.0.0';
+const version = '2.1.0';
 const cacheName = prefix + version;
 const scope = self.registration.scope;
 const shell = new URL('index.html', scope).href;
-const assets = ['manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'google-sync.js'];
+const assets = ['relief.css', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'google-sync.js'];
 self.addEventListener('install', event => {
   event.waitUntil((async () => {
     const page = await fetch(shell, {cache: 'reload'});
@@ -12,7 +12,7 @@ self.addEventListener('install', event => {
       throw new Error('Сборка ещё не опубликована полностью.');
     }
     const cache = await caches.open(cacheName);
-    await cache.addAll(assets.map(path => new Request(new URL(path.endsWith('.js') ? path + '?v=' + version : path, scope), {cache: 'reload'})));
+    await cache.addAll(assets.map(path => new Request(new URL(/\.(js|css)$/.test(path) ? path + '?v=' + version : path, scope), {cache: 'reload'})));
     await cache.put(shell, page);
     await self.skipWaiting();
   })());
@@ -31,6 +31,6 @@ self.addEventListener('fetch', event => {
   if (request.method !== 'GET' || !url.href.startsWith(scope)) return;
   const path = url.pathname.slice(new URL(scope).pathname.length);
   if (!['', 'index.html', ...assets].includes(path)) return;
-  const key = path.endsWith('.js') ? request.url : path && path !== 'index.html' ? new URL(path, scope).href : shell;
+  const key = /\.(js|css)$/.test(path) ? request.url : path && path !== 'index.html' ? new URL(path, scope).href : shell;
   event.respondWith(caches.open(cacheName).then(async cache => (await cache.match(key)) || fetch(request)));
 });
