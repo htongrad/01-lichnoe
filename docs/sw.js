@@ -1,6 +1,6 @@
 'use strict';
 const prefix = 'lichnoe-shell-';
-const version = '2.1.0';
+const version = '2.1.1';
 const cacheName = prefix + version;
 const scope = self.registration.scope;
 const shell = new URL('index.html', scope).href;

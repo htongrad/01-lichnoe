@@ -438,8 +438,13 @@
       if (busy || connecting) message = 'Подключение или синхронизация…';
       else if (!navigator.onLine && settings.clientId) message = 'Панель ждёт интернет.';
       else if (failed || (!settings.lastSync && status)) message = status;
+      else if (!settings.clientId) message = 'Подключение не настроено.';
       else if (settings.pending) message = 'Есть изменения для отправки.';
-      return (message ? '<p>' + esc(message) + '</p>' : '') + syncButton();
+      return {
+        configured: Boolean(settings.clientId),
+        waiting: busy || connecting || Boolean(preparation),
+        message: message || (settings.clientId ? 'Ожидает первой синхронизации.' : 'Подключение не настроено.')
+      };
     },
     clearRestore() { restoreTimeZone = undefined; },
     restored() {

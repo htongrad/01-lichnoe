@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="panel-build" content="2.1.0">
+<meta name="panel-build" content="2.1.1">
 <title>Личное</title>
 <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f0f2ee">
 <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#17201d">
@@ -11,21 +11,28 @@
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" href="./icon-192.png?v=2.1.0">
 <link rel="apple-touch-icon" href="./icon-192.png?v=2.1.0">
-<link rel="stylesheet" href="./relief.css?v=2.1.0">
+<link rel="stylesheet" href="./relief.css?v=2.1.1">
 </head>
 <body>
 <div id="personal">
-  <header><button type="button" class="brand" data-page="overview" aria-label="Личное. Открыть обзор"><img src="./icon-192.png?v=2.1.0" width="38" height="38" alt="">Личное</button><details class="menu">
+  <header><button type="button" class="brand" data-page="overview" aria-label="Личное. Открыть обзор"><img src="./icon-192.png?v=2.1.0" width="38" height="38" alt="">Личное</button><button type="button" id="header-sync" aria-label="Синхронизировать" title="Синхронизировать" disabled>
+    <svg class="ui-icon" aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11a8 8 0 0 1 14-5l2 2 M20 3v5h-5 M20 13a8 8 0 0 1-14 5l-2-2 M4 21v-5h5"/></svg>
+  </button><details class="menu">
     <summary aria-label="Меню"><svg class="ui-icon" aria-hidden="true" focusable="false" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h.1 M12 12h.1 M20 12h.1"/></svg></summary>
     <div class="menu-items">
       <button type="button" data-action="google">Синхронизация Google</button>
       <button type="button" data-action="backups">Копии данных</button>
       <button type="button" data-action="install" hidden>Установить приложение</button>
-      <small>Сборка 2.1.0</small>
+      <small>Сборка 2.1.1</small>
     </div>
   </details></header>
   <p class="notice" role="status" hidden></p>
   <main></main>
+  <dialog id="google-dialog" aria-labelledby="sync-setup-title">
+    <h2 id="sync-setup-title">Подключение Google</h2>
+    <div id="sync-setup-fields"></div>
+    <form method="dialog"><button class="action">Закрыть</button></form>
+  </dialog>
   <input type="file" id="backup-file" accept=".json,application/json" hidden>
   <div class="bottom">
     <button type="button" class="create" aria-label="Создать запись" hidden><svg class="ui-icon" aria-hidden="true" focusable="false" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14 M5 12h14"/></svg></button>
@@ -36,7 +43,7 @@
     </nav>
   </div>
 </div>
-<script src="./google-sync.js?v=2.1.0"></script>
+<script src="./google-sync.js?v=2.1.1"></script>
 <script id="personal-script">
 (() => {
   const root = document.getElementById('personal');
@@ -91,13 +98,33 @@
   const create = root.querySelector('.create');
   const notice = root.querySelector('.notice');
   const googleSync = window.lichnoeGoogle;
+  const headerSync = root.querySelector('#header-sync');
+  const setupDialog = root.querySelector('#google-dialog');
+  const setupFields = root.querySelector('#sync-setup-fields');
   function refreshSyncSummary() {
+    const state = googleSync?.overview();
+    headerSync.disabled = !state || state.waiting;
+    headerSync.setAttribute('aria-busy',String(Boolean(state?.waiting)));
+    const label = state && !state.configured ? 'Настроить синхронизацию' : 'Синхронизировать';
+    headerSync.setAttribute('aria-label',label);
+    headerSync.title = label;
     const summary = main.querySelector('#google-summary');
-    if (!summary) return;
-    const content = googleSync?.overview() ?? '';
-    if (summary.innerHTML !== content) summary.innerHTML = content;
-    summary.parentElement.hidden = !content;
+    const message = state?.message || 'Синхронизация недоступна.';
+    if (summary && summary.textContent !== message) summary.textContent = message;
   }
+  headerSync.addEventListener('click', () => {
+    if (googleSync.overview().configured) {
+      googleSync.action('sync');
+    } else {
+      setupFields.innerHTML = googleSync.html();
+      setupDialog.showModal();
+    }
+  });
+  setupFields.addEventListener('submit', event => {
+    event.preventDefault();
+    googleSync.configure(event.target);
+    if (googleSync.overview().configured) setupDialog.close();
+  });
   const storageKey = 'lichnoe:v1';
   const menu = root.querySelector('.menu');
   const installButton = menu.querySelector('[data-action=install]');
@@ -440,8 +467,11 @@
           <section class="section"><h2>Сегодня</h2>${eventList(today)}</section>
           ${nextWeekAgenda()}
           <section class="section"><h2>Последние заметки</h2>${noteList(true)}</section>
-          <section class="section sync-module" hidden><div class="help-title"><h2>Google</h2><button type="button" class="help" data-hint="Сохранит копию на Диске и обновит события в календаре этой панели." aria-label="Подсказка: синхронизация" aria-expanded="false"><span aria-hidden="true">?</span></button></div><div id="google-summary" aria-live="polite"></div></section>
-        </div>`;
+        </div>
+        <footer class="sync-footer" aria-label="Синхронизация Google">
+          <div class="help-title"><h2>Google</h2><button type="button" class="help" data-hint="Две стрелки в шапке сохраняют копию на Диске и обновляют календарь." aria-label="Подсказка: синхронизация" aria-expanded="false"><span aria-hidden="true">?</span></button></div>
+          <p id="google-summary" role="status"></p>
+        </footer>`;
     } else {
       main.innerHTML = page === 'calendar' ? calendar() : `${hero('Заметки', 'Записей: ' + data.notes.length, true)}${noteList(false)}`;
     }
