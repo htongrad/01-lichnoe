@@ -239,7 +239,7 @@
     const {id,exportedAt} = settings.upload;
     const date = exportedAt.slice(0, 19).replace('T',' ').replaceAll(':','-');
     const name = 'Личное — ' + date + ' UTC.json';
-    const contents = JSON.stringify({format:'lichnoe-backup',version:1,exportedAt,...snapshot});
+    const contents = JSON.stringify({format:'01-lichnoe-backup',version:2,exportedAt,...snapshot});
     const metadata = {id,name,parents:[settings.folder],mimeType:'application/json',appProperties:{panelBackup:TAG,snapshotHash:hash}};
     const saved = await uploadSnapshot(metadata, contents);
     if (saved.status === 409) {

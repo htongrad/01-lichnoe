@@ -1,39 +1,36 @@
+'use strict';
 const prefix = 'lichnoe-shell-';
-const version = '1.3.1';
+const version = '2.0.0';
 const cacheName = prefix + version;
-const home = new URL('./', self.registration.scope);
-const shell = new URL('index.html', home);
-const syncPath = 'google-sync.js?v=' + version;
-const syncScript = new URL(syncPath, home);
+const scope = self.registration.scope;
+const shell = new URL('index.html', scope).href;
+const assets = ['manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'google-sync.js'];
 self.addEventListener('install', event => {
-  event.waitUntil(caches.open(cacheName).then(cache =>
-    cache.addAll([shell.href, syncScript.href].map(url => new Request(url, {cache:'reload'})))));
+  event.waitUntil((async () => {
+    const page = await fetch(shell, {cache: 'reload'});
+    if (!page.ok || !(await page.clone().text()).includes('<meta name="panel-build" content="' + version + '">')) {
+      throw new Error('Сборка ещё не опубликована полностью.');
+    }
+    const cache = await caches.open(cacheName);
+    await cache.addAll(assets.map(path => new Request(new URL(path.endsWith('.js') ? path + '?v=' + version : path, scope), {cache: 'reload'})));
+    await cache.put(shell, page);
+    await self.skipWaiting();
+  })());
 });
 self.addEventListener('activate', event => {
-  event.waitUntil(caches.keys().then(keys => Promise.all(keys
-    .filter(key => key.startsWith(prefix) && key !== cacheName)
-    .map(key => caches.delete(key)))).then(() => self.clients.claim()));
+  event.waitUntil((async () => {
+    for (const name of await caches.keys()) {
+      if (name.startsWith(prefix) && name !== cacheName) await caches.delete(name);
+    }
+    await self.clients.claim();
+  })());
 });
 self.addEventListener('fetch', event => {
-  if (event.request.method !== 'GET') return;
-  const url = new URL(event.request.url);
-  if (url.href === syncScript.href) {
-    event.respondWith(fetch(event.request).catch(async () => (await caches.open(cacheName).then(cache => cache.match(syncScript.href))) ?? Response.error()));
-    return;
-  }
-  if (event.request.mode !== 'navigate') return;
-  if (url.origin !== home.origin || ![home.pathname, shell.pathname].includes(url.pathname)) return;
-  event.respondWith((async () => {
-    const cache = await caches.open(cacheName);
-    let response;
-    try {
-      response = await fetch(event.request);
-    } catch {
-      return await cache.match(shell.href) ?? Response.error();
-    }
-    if (response.ok && (await response.clone().text()).includes('./' + syncPath)) {
-      try { await cache.put(shell.href, response.clone()); } catch { /* Storage may be full. */ }
-    }
-    return response;
-  })());
+  const request = event.request;
+  const url = new URL(request.url);
+  if (request.method !== 'GET' || !url.href.startsWith(scope)) return;
+  const path = url.pathname.slice(new URL(scope).pathname.length);
+  if (!['', 'index.html', ...assets].includes(path)) return;
+  const key = path.endsWith('.js') ? request.url : path && path !== 'index.html' ? new URL(path, scope).href : shell;
+  event.respondWith(caches.open(cacheName).then(async cache => (await cache.match(key)) || fetch(request)));
 });
